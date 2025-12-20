@@ -324,7 +324,7 @@ gnn-challenge/
 
 The leaderboard is automatically updated when you submit your solution via Pull Request.
 
-👉 **[View Live Leaderboard](leaderboard.html)** (or check `leaderboard.html` in the repository)
+👉 **[View Live Leaderboard](https://samuelmatia.github.io/gnn-role-transition-challenge/leaderboard.html)**
 
 The leaderboard shows:
 - **Rank**: Your position based on Weighted Macro-F1 score
