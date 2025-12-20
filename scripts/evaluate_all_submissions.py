@@ -10,11 +10,12 @@ def evaluate_submission(submission_file):
     """Evaluate a single submission and return scores."""
     try:
         # Run scoring script with JSON output
+        script_dir = Path(__file__).parent.parent
         result = subprocess.run(
-            ['python', '../scoring_script.py', submission_file, '--json'],
+            ['python', str(script_dir / 'scoring_script.py'), submission_file, '--json'],
             capture_output=True,
             text=True,
-            cwd=Path(__file__).parent.parent
+            cwd=script_dir
         )
         
         if result.returncode != 0:
@@ -55,6 +56,10 @@ def main():
     
     if not csv_files:
         print("No submission files found in submissions/ directory")
+        # Create empty results file so generate_leaderboard doesn't fail
+        results_file = Path(__file__).parent.parent / 'evaluation_results.json'
+        with open(results_file, 'w') as f:
+            json.dump([], f, indent=2)
         return
     
     print(f"Found {len(csv_files)} submission(s) to evaluate")

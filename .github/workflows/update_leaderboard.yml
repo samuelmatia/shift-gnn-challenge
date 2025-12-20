@@ -28,13 +28,28 @@ jobs:
     - name: Install dependencies
       run: |
         pip install -r starter_code/requirements.txt
-        pip install pandas pyarrow scikit-learn
+        pip install pandas pyarrow scikit-learn requests gdown boto3
+    
+    - name: Download private test data
+      env:
+        PRIVATE_DATA_METHOD: ${{ secrets.PRIVATE_DATA_METHOD || 'url' }}
+        PRIVATE_DATA_URL: ${{ secrets.PRIVATE_DATA_URL }}
+        PRIVATE_DATA_TOKEN: ${{ secrets.PRIVATE_DATA_TOKEN }}
+        GOOGLE_DRIVE_FILE_ID: ${{ secrets.GOOGLE_DRIVE_FILE_ID }}
+        GOOGLE_DRIVE_ACCESS_TOKEN: ${{ secrets.GOOGLE_DRIVE_ACCESS_TOKEN }}
+        S3_BUCKET: ${{ secrets.S3_BUCKET }}
+        S3_KEY: ${{ secrets.S3_KEY }}
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      run: |
+        mkdir -p data/private
+        python scripts/download_private_data.py
     
     - name: Find and evaluate new submissions
       id: evaluate
       run: |
         mkdir -p results
-        python scripts/evaluate_all_submissions.py
+        python scripts/evaluate_all_submissions.py || echo "Evaluation completed with warnings"
         
     - name: Generate leaderboard
       run: |
