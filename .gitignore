@@ -24,9 +24,6 @@ ENV/
 .DS_Store
 Thumbs.db
 
-# Submissions (keep structure, ignore actual submissions)
-submissions/*.csv
-!submissions/sample_submission*.csv
 
 # Leaderboard data (will be generated, but we need to commit them for GitHub Pages)
 # Note: These files are auto-generated but must be in the repo for GitHub Pages to work
