@@ -133,11 +133,13 @@ def main():
     
     if not success:
         print("ERROR: Failed to download private test data")
+        print("Please configure GitHub Secrets for private data access")
         sys.exit(1)
     
     # Verify file exists and has content
     if not output_path.exists() or output_path.stat().st_size == 0:
         print("ERROR: Downloaded file is empty or doesn't exist")
+        print("Please check your private data configuration")
         sys.exit(1)
     
     print(f"Successfully downloaded {output_path}")

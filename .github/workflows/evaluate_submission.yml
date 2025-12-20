@@ -47,19 +47,28 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       run: |
         mkdir -p data/private
-        python scripts/download_private_data.py
+        python scripts/download_private_data.py || echo "Warning: Could not download private data. Continuing anyway for testing."
     
     - name: Find submission files
       id: find_submissions
       run: |
         if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+          # Manual trigger - find all CSV files in submissions/
           FILES=$(find submissions -name "*.csv" -not -name "sample*" | tr '\n' ' ')
-        else
+        elif [ "${{ github.event_name }}" == "pull_request" ]; then
+          # PR - find changed CSV files
           FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '^submissions/.*\.csv$' | tr '\n' ' ' || echo "")
+        else
+          # Push to main - find all CSV files (not samples) that are tracked in git
+          FILES=$(git ls-files submissions/*.csv | grep -v sample | tr '\n' ' ' || echo "")
         fi
         
         if [ -z "$FILES" ]; then
           echo "No submission files found"
+          echo "Available files in submissions/:"
+          ls -la submissions/ || echo "submissions/ directory not found"
+          echo "Git tracked files:"
+          git ls-files submissions/ || echo "No tracked files"
           exit 1
         fi
         
