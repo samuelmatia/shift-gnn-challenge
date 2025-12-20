@@ -1,0 +1,9 @@
+# GitHub Pages configuration
+# This file tells GitHub Pages to serve files as-is without Jekyll processing
+
+include: [leaderboard.html, index.html]
+exclude: []
+
+# Disable Jekyll processing (serve static files directly)
+plugins: []
+
