@@ -34,7 +34,7 @@ Ce guide vous explique comment mettre en place votre challenge sur GitHub avec u
 
 2. **Le leaderboard sera accessible à:**
    ```
-   https://VOTRE_USERNAME.github.io/gnn-role-transition-challenge/leaderboard.html
+   https://samuelmatia.github.io/gnn-role-transition-challenge/leaderboard.html
    ```
 
 ### 3. Configurer les Secrets (si nécessaire)
@@ -72,7 +72,7 @@ Ajoutez ceci dans votre README.md (section appropriée):
 
 Le leaderboard est mis à jour automatiquement à chaque soumission.
 
-👉 **[Voir le Leaderboard](https://VOTRE_USERNAME.github.io/gnn-role-transition-challenge/leaderboard.html)**
+👉 **[Voir le Leaderboard](https://samuelmatia.github.io/gnn-role-transition-challenge/leaderboard.html)**
 ```
 
 ## 📝 Instructions pour les Participants

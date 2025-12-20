@@ -38,6 +38,10 @@ jobs:
         
     - name: Generate leaderboard
       run: |
+        # Create initial leaderboard.json if it doesn't exist
+        if [ ! -f leaderboard.json ]; then
+          echo '{"last_updated": null, "submissions": []}' > leaderboard.json
+        fi
         python scripts/generate_leaderboard.py
     
     - name: Commit and push leaderboard
