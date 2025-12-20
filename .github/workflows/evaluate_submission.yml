@@ -48,10 +48,8 @@ jobs:
       id: find_submissions
       run: |
         if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-          # Manual trigger - find all CSV files in submissions/
           FILES=$(find submissions -name "*.csv" -not -name "sample*" | tr '\n' ' ')
         else
-          # PR - find changed CSV files
           FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '^submissions/.*\.csv$' | tr '\n' ' ' || echo "")
         fi
         
@@ -67,7 +65,6 @@ jobs:
       id: evaluate
       run: |
         mkdir -p results
-        RESULTS=""
         
         for FILE in ${{ steps.find_submissions.outputs.files }}; do
           if [ ! -f "$FILE" ]; then
@@ -78,37 +75,11 @@ jobs:
           TEAM_NAME=$(basename "$FILE" .csv)
           echo "Evaluating $FILE (team: $TEAM_NAME)..."
           
-          # Run scoring with JSON output
           python scoring_script.py "$FILE" --json > "results/${TEAM_NAME}_output.txt" 2>&1 || true
           
-          # Extract JSON from output
-          python3 << 'PYTHON_SCRIPT'
-import json
-import sys
-import re
-
-team_name = sys.argv[1]
-output_file = f"results/{team_name}_output.txt"
-
-try:
-    with open(output_file, 'r') as f:
-        content = f.read()
-    
-    # Find JSON in output
-    json_match = re.search(r'\{.*\}', content, re.DOTALL)
-    if json_match:
-        scores = json.loads(json_match.group())
-        print(f"{team_name}:{scores.get('weighted_f1', 0.0):.6f}:{scores.get('overall_macro_f1', 0.0):.6f}:{scores.get('rare_transitions_f1', 0.0):.6f}")
-    else:
-        print(f"{team_name}:0.0:0.0:0.0", file=sys.stderr)
-except Exception as e:
-    print(f"Error processing {team_name}: {e}", file=sys.stderr)
-    print(f"{team_name}:0.0:0.0:0.0", file=sys.stderr)
-PYTHON_SCRIPT
-          "$TEAM_NAME" >> results/scores.txt || echo "$TEAM_NAME:0.0:0.0:0.0" >> results/scores.txt
+          python scripts/extract_scores.py "$TEAM_NAME" >> results/scores.txt 2>&1 || echo "$TEAM_NAME:0.0:0.0:0.0" >> results/scores.txt
         done
         
-        # Store results
         if [ -f results/scores.txt ]; then
           cat results/scores.txt
         fi
@@ -116,65 +87,7 @@ PYTHON_SCRIPT
     - name: Update leaderboard
       if: success()
       run: |
-        python3 << 'PYTHON_SCRIPT'
-import json
-import sys
-from pathlib import Path
-from datetime import datetime
-
-# Load existing leaderboard
-leaderboard_file = Path("leaderboard.json")
-if leaderboard_file.exists():
-    with open(leaderboard_file, 'r') as f:
-        leaderboard = json.load(f)
-else:
-    leaderboard = {"last_updated": None, "submissions": []}
-
-# Parse scores
-scores_file = Path("results/scores.txt")
-if not scores_file.exists():
-    print("No scores file found")
-    sys.exit(1)
-
-existing_map = {sub['team']: sub for sub in leaderboard.get('submissions', [])}
-
-with open(scores_file, 'r') as f:
-    for line in f:
-        parts = line.strip().split(':')
-        if len(parts) >= 4:
-            team = parts[0]
-            weighted_f1 = float(parts[1])
-            overall_f1 = float(parts[2])
-            rare_f1 = float(parts[3])
-            
-            entry = {
-                'team': team,
-                'submission_file': f"submissions/{team}.csv",
-                'weighted_f1': weighted_f1,
-                'overall_f1': overall_f1,
-                'rare_f1': rare_f1,
-                'timestamp': datetime.now().isoformat()
-            }
-            
-            # Update if better score or new team
-            if team not in existing_map or entry['weighted_f1'] > existing_map[team]['weighted_f1']:
-                existing_map[team] = entry
-                print(f"Updated entry for {team}: {weighted_f1:.6f}")
-
-# Sort and save
-submissions = list(existing_map.values())
-submissions.sort(key=lambda x: x['weighted_f1'], reverse=True)
-
-leaderboard = {
-    'last_updated': datetime.now().isoformat(),
-    'submissions': submissions
-}
-
-with open(leaderboard_file, 'w') as f:
-    json.dump(leaderboard, f, indent=2)
-
-print(f"Leaderboard updated with {len(submissions)} teams")
-PYTHON_SCRIPT
+        python scripts/update_leaderboard_from_scores.py
     
     - name: Generate HTML leaderboard
       run: |
@@ -190,15 +103,16 @@ PYTHON_SCRIPT
           
           let comment = "## 📊 Submission Evaluation Results\n\n";
           
-          // Read all result files
           const resultsDir = 'results';
-          const files = fs.readdirSync(resultsDir);
-          
-          for (const file of files) {
-            if (file.endsWith('_output.txt')) {
-              const teamName = file.replace('_output.txt', '');
-              const content = fs.readFileSync(path.join(resultsDir, file), 'utf8');
-              comment += `### Team: ${teamName}\n\n\`\`\`\n${content}\n\`\`\`\n\n`;
+          if (fs.existsSync(resultsDir)) {
+            const files = fs.readdirSync(resultsDir);
+            
+            for (const file of files) {
+              if (file.endsWith('_output.txt')) {
+                const teamName = file.replace('_output.txt', '');
+                const content = fs.readFileSync(path.join(resultsDir, file), 'utf8');
+                comment += `### Team: ${teamName}\n\n\`\`\`\n${content}\n\`\`\`\n\n`;
+              }
             }
           }
           
@@ -220,4 +134,3 @@ PYTHON_SCRIPT
         git add leaderboard.json leaderboard.html
         git diff --staged --quiet || git commit -m "Auto-update leaderboard [skip ci]"
         git push || echo "Nothing to push"
-
