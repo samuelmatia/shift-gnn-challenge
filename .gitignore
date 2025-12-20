@@ -1,0 +1,33 @@
+# Data files (sensitive)
+data/private/
+
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Submissions (keep structure, ignore actual submissions)
+submissions/*.csv
+!submissions/sample_submission*.csv
+
+# Leaderboard data (will be generated)
+leaderboard.json
+leaderboard.html
