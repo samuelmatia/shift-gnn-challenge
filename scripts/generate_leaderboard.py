@@ -5,6 +5,24 @@ import json
 from datetime import datetime
 from pathlib import Path
 
+def format_datetime(iso_string):
+    """Format ISO datetime string to human-readable format."""
+    if not iso_string:
+        return "Never"
+    
+    try:
+        # Parse ISO format (handle both with and without timezone)
+        dt = datetime.fromisoformat(iso_string.replace('Z', '+00:00'))
+        # Format: "December 20, 2025 at 22:56:05"
+        return dt.strftime("%B %d, %Y at %H:%M:%S")
+    except (ValueError, AttributeError):
+        # If parsing fails, return as-is or try alternative format
+        try:
+            dt = datetime.strptime(iso_string.split('.')[0], '%Y-%m-%dT%H:%M:%S')
+            return dt.strftime("%B %d, %Y at %H:%M:%S")
+        except:
+            return iso_string
+
 def load_evaluation_results():
     """Load evaluation results."""
     results_file = Path(__file__).parent.parent / 'evaluation_results.json'
@@ -187,7 +205,7 @@ def generate_html(leaderboard):
             <h1>🏆 GNN Challenge Leaderboard</h1>
             <p>Role Transition Prediction in Temporal Networks</p>
         </div>
-        <p class="last-updated">Last updated: """ + (leaderboard.get("last_updated", "Never") or "Never") + """</p>
+        <p class="last-updated">Last updated: """ + format_datetime(leaderboard.get("last_updated")) + """</p>
         
         <div class="leaderboard">
             <table>
@@ -222,11 +240,7 @@ def generate_html(leaderboard):
             
             timestamp = entry.get("timestamp", "")
             if timestamp:
-                try:
-                    dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
-                    timestamp = dt.strftime("%Y-%m-%d %H:%M")
-                except:
-                    pass
+                timestamp = format_datetime(timestamp)
             
             html += f"""                    <tr>
                         <td class="rank {rank_class}"><span class="medal">{medal}</span>{idx}</td>
