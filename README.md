@@ -4,7 +4,7 @@
 
 Welcome to the **Role Transition Prediction Challenge**! This competition focuses on predicting how user roles evolve over time in the Super User Stack Exchange temporal network.
 
-**[View Live Leaderboard](https://samuelmatia.github.io/gnn-role-transition-challenge/leaderboard.html)**
+**[🏆 View Live Leaderboard](https://samuelmatia.github.io/gnn-role-transition-challenge/leaderboard.html)**
 
 ### Problem Description
 
