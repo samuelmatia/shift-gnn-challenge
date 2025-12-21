@@ -35,6 +35,14 @@ The dataset is based on the **Super User Stack Exchange temporal network** from 
 - **Time Span**: ~7 years (2009-2016)
 - **Edge Types**: Answers to questions, comments to questions, comments to answers
 
+### Graph Visualization
+
+Below is a sample visualization of the temporal network structure:
+
+![Graph Visualization](docs/graph_visualization.png)
+
+*Sample visualization showing user interactions and role distributions in a temporal snapshot. Nodes represent users (colored by role), edges represent interactions, and node size indicates activity level.*
+
 ### Downloading the Dataset
 
 **Important**: You must download the preprocessed dataset files and place them in the `data/processed/` directory before running any models.
