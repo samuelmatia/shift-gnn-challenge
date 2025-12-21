@@ -4,6 +4,8 @@
 
 Welcome to the **Role Transition Prediction Challenge**! This competition focuses on predicting how user roles evolve over time in the Super User Stack Exchange temporal network.
 
+**[View Live Leaderboard](https://samuelmatia.github.io/gnn-role-transition-challenge/leaderboard.html)**
+
 ### Problem Description
 
 The task is to predict **role transitions** - how a user's role evolves from one temporal snapshot to the next. Given a user's current role and their interaction history up to time `t`, predict their role at time `t+k`.
@@ -48,39 +50,11 @@ Below is a sample visualization of the temporal network structure:
 **Important**: You must download the preprocessed dataset files and place them in the `data/processed/` directory before running any models.
 
 **Required files to download:**
-- `train.parquet` - Training set with labels (~1.5M rows)
-- `test_features.parquet` - Test set features without labels (~700K rows)
+- `train.parquet` - Training set with labels 
+- `test_features.parquet` - Test set features without labels
 
-**Directory structure after download:**
-```
-data/
-└── processed/
-    ├── train.parquet          # Download and place here
-    └── test_features.parquet  # Download and place here
-```
-
-Make sure both files are in `data/processed/` before proceeding with the baselines or your own models.
-
-### Data Format
-
-All data files are stored in Parquet format in the `data/processed/` directory.
-
-#### File Overview
-
-| File | Rows | Description | Availability | Location |
-|------|------|-------------|--------------|----------|
-| `train.parquet` | ~1,476,626 | Training transitions (2009-2014) | Public | `data/processed/` (download required) |
-| `test_features.parquet` | ~698,639 | Test features without labels (2014-2016) | Public | `data/processed/` (download required) |
-| `test.parquet` | ~698,639 | Test ground truth with labels (for scoring) | Private (organizers only) | `data/private/` |
 
 #### Column Descriptions
-
-**Role Labels:**
-- `0` = Inactive
-- `1` = Novice  
-- `2` = Contributor
-- `3` = Expert
-- `4` = Moderator
 
 #### train.parquet (16 columns)
 
@@ -106,19 +80,12 @@ All data files are stored in Parquet format in the `data/processed/` directory.
 #### test_features.parquet (12 columns)
 
 Same structure as `train.parquet`, but **without** the following columns (labels are hidden):
-- ❌ `next_role` (to be predicted)
-- ❌ `transition_label` (to be predicted)
-- ❌ `next_snapshot_start` (future information)
-- ❌ `next_snapshot_end` (future information)
+-  `next_role` (to be predicted)
+-  `transition_label` (to be predicted)
+-  `next_snapshot_start` (future information)
+-  `next_snapshot_end` (future information)
 
-**Available columns:**
-- ✅ `user_id`, `snapshot_id`, `current_role`
-- ✅ `snapshot_start`, `snapshot_end`
-- ✅ All 8 graph features (out_degree, in_degree, etc.)
 
-#### test.parquet (16 columns) - PRIVATE
-
-Same structure as `train.parquet` with all columns including labels. This file is **only available to organizers** for scoring submissions.
 
 #### Example Data Row
 
@@ -162,6 +129,7 @@ This metric:
 - Overall Macro-F1 (unweighted)
 - Rare Transitions Macro-F1 (transitions occurring in < 5% of cases)
 - Per-transition F1 scores
+
 
 ## 🚀 Getting Started
 
