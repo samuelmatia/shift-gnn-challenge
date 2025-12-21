@@ -131,183 +131,15 @@ This metric:
 - Per-transition F1 scores
 
 
-## 🚀 Getting Started
-
-### 1. Setup Environment
-
-```bash
-pip install -r starter_code/requirements.txt
-```
-
-### 2. Download Dataset
-
-Download the preprocessed dataset files and place them in the `data/processed/` directory:
-
-```
-data/processed/
-├── train.parquet          # Training set (required)
-└── test_features.parquet  # Test features (required)
-```
-
-**Note**: The dataset files must be downloaded separately and placed in `data/processed/` before proceeding.
-
-### 3. Run Baseline
-
-**Simple Baseline (Random Forest):**
-```bash
-cd starter_code
-python baseline.py
-```
-
-The simple baseline uses a Random Forest classifier on graph-based features. Expected performance:
-- Overall Macro-F1: ~0.35-0.45
-- Rare Transitions F1: ~0.15-0.25
-
-**Advanced Baseline (GNN + LSTM):**
-```bash
-cd starter_code
-python baseline2.py
-```
-
-The advanced baseline uses GraphSAGE (DGL) + LSTM to capture both graph structure and temporal dynamics. Expected performance:
-- Overall Macro-F1: ~0.45-0.55
-- Rare Transitions F1: ~0.25-0.35
-
-This demonstrates how GNN methods can improve performance over simple feature-based models.
-
-### 4. Make Predictions
-
-Your submission should be a CSV file with columns:
-- `user_id`: User identifier
-- `snapshot_id`: Snapshot identifier
-- `predicted_role`: Predicted next role (0-4)
-
-Example:
-```csv
-user_id,snapshot_id,predicted_role
-123,5,2
-456,5,3
-789,6,1
-```
-
-Save your submission to `submissions/your_submission.csv`
-
-### 5. Score Your Submission
-
-```bash
-python scoring_script.py submissions/your_submission.csv
-```
-
 ## 📋 Constraints
 
 To ensure fair competition and focus on GNN methods:
 
-1. **No External Data**: You cannot use external datasets, pre-trained embeddings, or any data not derived from the provided temporal graph.
+1. **No External Data**
+2. **DGL Methods Only**
+3. **Graph Features Only**
 
-2. **DGL Methods Only**: Use methods covered in DGL lectures 1.1-4.6:
-   - Message passing (GCN, GraphSAGE, GAT, etc.)
-   - Sampling methods (neighbor sampling, layer-wise sampling)
-   - Graph construction and batching
-   - Temporal graph methods
 
-3. **Graph Features Only**: All features must be extracted from the temporal graph structure. No text features, user profiles, or external metadata.
-
-4. **Temporal Split**: Respect the temporal split - do not use future information to predict past transitions.
-
-5. **No Pre-trained Models**: Pre-trained models (e.g., BERT embeddings) are not allowed unless they are trained solely on the provided data.
-
-## 🏆 Tips for Success
-
-1. **Leverage Temporal Structure**: Use temporal GNN architectures (TGN, EvolveGCN) or sequence models (LSTM, Transformer) to capture temporal dynamics.
-
-2. **Handle Class Imbalance**: Use techniques like class weighting, focal loss, or resampling to handle imbalanced role distributions.
-
-3. **Focus on Rare Transitions**: Design your model to specifically improve performance on rare transitions, not just overall accuracy.
-
-4. **Graph Sampling**: Use efficient sampling strategies (GraphSAGE, FastGCN) to handle the large graph size.
-
-5. **Feature Engineering**: Extract rich temporal and structural features from the graph:
-   - Temporal motifs
-   - Neighborhood evolution patterns
-   - Centrality measures over time
-   - Interaction type distributions
-
-6. **Ensemble Methods**: Combine multiple models or use ensemble techniques to improve robustness.
-
-## 📁 Repository Structure
-
-```
-gnn-challenge/
-├── .github/
-│   └── workflows/
-│       ├── evaluate_submission.yml    # Auto-evaluate PR submissions
-│       └── update_leaderboard.yml     # Auto-update leaderboard
-├── data/
-│   ├── processed/                # Download dataset files here
-│   │   ├── train.parquet         # Training set (download required)
-│   │   └── test_features.parquet # Test features (download required)
-│   └── private/                  # Private test labels (organizers only)
-│       └── test.parquet          # Test ground truth (for scoring)
-├── scripts/
-│   ├── evaluate_all_submissions.py    # Evaluate all submissions
-│   └── generate_leaderboard.py        # Generate leaderboard HTML/JSON
-├── submissions/
-│   └── sample_submission*.csv    # Example submission format
-├── starter_code/
-│   ├── baseline.py               # Simple baseline model (Random Forest)
-│   ├── baseline2.py              # Advanced baseline model (GNN + LSTM)
-│   └── requirements.txt          # Python dependencies
-├── prepare_data.py               # Data preparation script
-├── scoring_script.py             # Evaluation script
-├── update_leaderboard.py         # Leaderboard update script
-├── leaderboard.json              # Leaderboard data (auto-generated)
-├── leaderboard.html              # Leaderboard page (auto-generated)
-├── GITHUB_SETUP.md               # GitHub setup guide
-└── README.md                     # This file
-```
-
-## 📝 Submission Guidelines
-
-1. **Format**: CSV file with columns `user_id`, `snapshot_id`, `predicted_role`
-2. **Naming**: Use descriptive names like `submissions/team_name_model_v1.csv`
-3. **Validation**: Ensure all user_id and snapshot_id pairs from test set are included
-4. **Predictions**: `predicted_role` must be integers 0-4
-
-## 🔬 Baseline Models Details
-
-**Simple Baseline** (`starter_code/baseline.py`):
-- Uses Random Forest with 100 trees
-- Features: current role + graph statistics (degrees, interactions, etc.)
-- Handles class imbalance with `class_weight='balanced'`
-- Expected performance: ~0.35-0.45 Macro-F1 overall, ~0.15-0.25 on rare transitions
-
-**Advanced Baseline** (`starter_code/baseline2.py`):
-- Uses GraphSAGE (DGL) for learning node embeddings from graph structure
-- LSTM layer for capturing temporal dynamics
-- Combines graph embeddings with node features and current role
-- Handles class imbalance with weighted cross-entropy loss
-- Expected performance: ~0.45-0.55 Macro-F1 overall, ~0.25-0.35 on rare transitions
-
-**Your goal**: Significantly outperform both baselines using state-of-the-art GNN methods!
-
-## 📚 References
-
-- **Dataset**: [SNAP Super User Network](https://snap.stanford.edu/data/sx-superuser.html)
-- **GNNs**: [Basira Lab youtube](https://www.youtube.com/playlist?list=PLug43ldmRSo14Y_vt7S6vanPGh-JpHR7T)
-- **Tutorials GNNs**: [Basira Lab Github](https://github.com/basiralab/dgl)
-
-## 🏆 Leaderboard
-
-The leaderboard is automatically updated when you submit your solution via Pull Request.
-
-👉 **[View Live Leaderboard](https://samuelmatia.github.io/gnn-role-transition-challenge/leaderboard.html)**
-
-The leaderboard shows:
-- **Rank**: Your position based on Weighted Macro-F1 score
-- **Team Name**: Your submission filename (without .csv)
-- **Weighted Macro-F1**: Primary evaluation metric
-- **Overall Macro-F1**: Overall performance across all transitions
-- **Rare Transitions F1**: Performance on rare transitions (< 5% frequency)
 
 ## 🤝 How to Submit
 
@@ -323,39 +155,61 @@ The leaderboard shows:
 
 4. **Generate predictions** for the test set and save as CSV:
    ```bash
-   # Your submission file should be named: submissions/your_team_name.csv
-   # Format: user_id, snapshot_id, predicted_role
+
+   Your submission should be a CSV file with columns:
+- `user_id`: User identifier
+- `snapshot_id`: Snapshot identifier
+- `predicted_role`: Predicted next role (0-4)
    ```
 
-5. **Create a Pull Request** with your submission file:
-   - Add your CSV file to `submissions/your_team_name.csv`
-   - The GitHub Action will automatically evaluate your submission
-   - If valid, your score will appear on the leaderboard
+```bash
+Example:
 
-### Submission Requirements
+user_id,snapshot_id,predicted_role
+123,5,2
+456,5,3
+789,6,1
 
-- **File naming**: `submissions/team_name.csv` (use your team name)
-- **CSV format**: Must have columns `user_id`, `snapshot_id`, `predicted_role`
-- **Predictions**: `predicted_role` must be integers 0-4
-- **Completeness**: Must include predictions for all test samples
+#Your submission file should be named: submissions/your_team_name.csv
+```
+   
 
-### Automatic Evaluation
+5. **Score Your Submission**
 
-When you submit a Pull Request:
-1. GitHub Actions automatically runs the evaluation
-2. Your submission is scored using the test set
-3. Results are posted as a comment on your PR
-4. If your score is valid, the leaderboard is updated automatically
-5. The leaderboard HTML page is regenerated and available on GitHub Pages
-
-### Local Testing
-
-Before submitting, test your submission locally:
 ```bash
 python scoring_script.py submissions/your_team_name.csv
 ```
 
-This will show you the same metrics that will be used for the leaderboard.
+6. **Create a Pull Request** with your submission file:
+   - Add your CSV file to `submissions/your_team_name.csv`
+   - The GitHub Action will automatically evaluate your submission
+   - If valid, your score will appear on the leaderboard
+
+
+
+## 🏆 Leaderboard
+
+The leaderboard is automatically updated when you submit your solution via Pull Request.
+
+👉 **[View Live Leaderboard](https://samuelmatia.github.io/gnn-role-transition-challenge/leaderboard.html)**
+
+The leaderboard shows:
+- **Rank**: Your position based on Weighted Macro-F1 score
+- **Team Name**: Your submission filename (without .csv)
+- **Weighted Macro-F1**: Primary evaluation metric
+- **Overall Macro-F1**: Overall performance across all transitions
+- **Rare Transitions F1**: Performance on rare transitions (< 5% frequency)
+
+
+
+## 📚 References
+
+- **Dataset**: [SNAP Super User Network](https://snap.stanford.edu/data/sx-superuser.html)
+- **GNNs**: [Basira Lab youtube](https://www.youtube.com/playlist?list=PLug43ldmRSo14Y_vt7S6vanPGh-JpHR7T)
+- **Tutorials GNNs**: [Basira Lab Github](https://github.com/basiralab/dgl)
+
+
+
 
 ## 📄 License
 
