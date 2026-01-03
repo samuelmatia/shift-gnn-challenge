@@ -29,6 +29,7 @@ The task is to predict **role transitions** - how a user's role evolves from one
 
 5. **Temporal Dynamics**: The challenge requires modeling both the temporal evolution of individual users and the network-level dynamics.
 
+
 ## 📊 Dataset
 
 The dataset is based on the **Super User Stack Exchange temporal network** from SNAP:
@@ -37,22 +38,9 @@ The dataset is based on the **Super User Stack Exchange temporal network** from 
 - **Time Span**: ~7 years (2009-2016)
 - **Edge Types**: Answers to questions, comments to questions, comments to answers
 
-### Graph Visualization
-
-Below is a sample visualization of the temporal network structure:
-
-![Graph Visualization](docs/graph_visualization.png)
-
-*Sample visualization showing user interactions and role distributions in a temporal snapshot. Nodes represent users (colored by role), edges represent interactions, and node size indicates activity level.*
-
-### Downloading the Dataset
-
-**Important**: You must download the preprocessed dataset files and place them in the `data/processed/` directory before running any models.
-
-**Required files to download:**
+**Files available in `data/processed/` :**
 - `train.parquet` - Training set with labels 
 - `test_features.parquet` - Test set features without labels
-
 
 #### Column Descriptions
 
@@ -86,7 +74,6 @@ Same structure as `train.parquet`, but **without** the following columns (labels
 -  `next_snapshot_end` (future information)
 
 
-
 #### Example Data Row
 
 ```python
@@ -107,6 +94,16 @@ Same structure as `train.parquet`, but **without** the following columns (labels
     'avg_interactions_per_day': 0.078
 }
 ```
+
+### Graph Visualization
+
+Below is a sample visualization of the temporal network structure:
+
+![Graph Visualization](docs/graph_visualization.png)
+
+*Sample visualization showing user interactions and role distributions in a temporal snapshot. Nodes represent users (colored by role), edges represent interactions, and node size indicates activity level.*
+
+
 
 ## 🎯 Evaluation Metric
 
@@ -148,7 +145,6 @@ To ensure fair competition and focus on scalable GNN methods:
      - subgraph or mini-batch training
      - memory-efficient message passing
    - Full-batch training on the entire graph is discouraged if it leads to excessive computation time or memory usage.
-
 
 
 ## 🤝 How to Submit
@@ -213,8 +209,6 @@ The leaderboard shows:
 - **Dataset**: [SNAP Super User Network](https://snap.stanford.edu/data/sx-superuser.html)
 - **GNNs**: [Basira Lab youtube](https://www.youtube.com/playlist?list=PLug43ldmRSo14Y_vt7S6vanPGh-JpHR7T)
 - **Tutorials GNNs**: [Basira Lab Github](https://github.com/basiralab/dgl)
-
-
 
 
 ## 📄 License
