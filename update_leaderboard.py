@@ -257,6 +257,12 @@ def generate_html_leaderboard(leaderboard):
             animation: fadeIn 1s ease-out 0.5s both;
         }
         
+        .footer a:hover {
+            color: white;
+            border-bottom-color: rgba(255, 255, 255, 0.6);
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+        
         @keyframes fadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
@@ -388,6 +394,14 @@ def generate_html_leaderboard(leaderboard):
         
         <div class="footer">
             <p>Submit your solution via Pull Request to appear on the leaderboard!</p>
+            <p style="margin-top: 10px; font-size: 0.95em;">
+                <a href="https://github.com/samuelmatia/gnn-role-transition-challenge" 
+                   target="_blank" 
+                   rel="noopener noreferrer"
+                   style="color: rgba(255, 255, 255, 0.9); text-decoration: none; border-bottom: 1px solid rgba(255, 255, 255, 0.3); transition: all 0.3s ease;">
+                    🔗 View Repository on GitHub
+                </a>
+            </p>
         </div>
     </div>
     
