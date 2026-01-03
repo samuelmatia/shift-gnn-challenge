@@ -663,8 +663,8 @@ def train_model():
     })
     
     os.makedirs('../submissions', exist_ok=True)
-    submission.to_csv('./submissions/team_sam_GraphSAGE+LSTM_1_epoch_training.csv', index=False)
-    print("Saved predictions to ./team_sam_GraphSAGE+LSTM_1_epoch_training.csv")
+    submission.to_csv('./submissions/team_sam_GraphSAGE+LSTM_1epoch_training.csv', index=False)
+    print("Saved predictions to ./team_sam_GraphSAGE+LSTM_1epoch_training.csv")
     
     # Clean up model file
     if os.path.exists('best_model.pt'):
