@@ -171,8 +171,8 @@ To ensure fair competition and focus on scalable GNN methods:
    user_id,snapshot_id,predicted_role
    123,5,2
    456,5,3
-   789,6,1 ```
-
+   789,6,1 
+```
 **Your submission file should be named: submissions/your_team_name.csv**
 
 
