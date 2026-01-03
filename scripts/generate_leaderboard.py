@@ -225,7 +225,6 @@ def generate_html(leaderboard):
         
         .rank-1 { 
             color: #f39c12;
-            animation: pulse 2s ease-in-out infinite;
         }
         .rank-2 { color: #95a5a6; }
         .rank-3 { color: #e67e22; }
@@ -234,7 +233,6 @@ def generate_html(leaderboard):
             font-size: 1.5em;
             margin-right: 8px;
             display: inline-block;
-            animation: bounce 1s ease-in-out infinite;
         }
         
         .team-name {
@@ -437,51 +435,125 @@ def generate_html(leaderboard):
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
         
-        // Graph nodes
+        // Enhanced Graph Network Background
         const nodes = [];
-        const nodeCount = 50;
-        const connectionDistance = 150;
+        const nodeCount = 80;
+        const connectionDistance = 200;
+        const minDistance = 80;
+        const maxDistance = 250;
+        const attractionForce = 0.0001;
+        const repulsionForce = 0.02;
+        const damping = 0.95;
         
-        // Initialize nodes
+        // Initialize nodes with better distribution
         class Node {
             constructor() {
                 this.x = Math.random() * canvas.width;
                 this.y = Math.random() * canvas.height;
-                this.vx = (Math.random() - 0.5) * 0.5;
-                this.vy = (Math.random() - 0.5) * 0.5;
-                this.radius = Math.random() * 3 + 2;
-                this.hue = Math.random() * 60 + 240; // Purple/blue range
+                this.vx = (Math.random() - 0.5) * 0.3;
+                this.vy = (Math.random() - 0.5) * 0.3;
+                this.radius = Math.random() * 2.5 + 1.5;
+                this.baseHue = Math.random() * 60 + 240; // Purple/blue range
+                this.hue = this.baseHue;
+                this.brightness = 50 + Math.random() * 20;
+                this.pulsePhase = Math.random() * Math.PI * 2;
+                this.pulseSpeed = 0.02 + Math.random() * 0.02;
+                this.connections = [];
             }
             
-            update() {
+            update(others) {
+                // Apply physics forces
+                let fx = 0, fy = 0;
+                
+                for (let other of others) {
+                    if (other === this) continue;
+                    
+                    const dx = other.x - this.x;
+                    const dy = other.y - this.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < 0.1) continue;
+                    
+                    // Attraction for nearby nodes
+                    if (distance < maxDistance && distance > minDistance) {
+                        const force = (distance - minDistance) * attractionForce;
+                        fx += (dx / distance) * force;
+                        fy += (dy / distance) * force;
+                    }
+                    
+                    // Repulsion for very close nodes
+                    if (distance < minDistance) {
+                        const force = repulsionForce / (distance * distance);
+                        fx -= (dx / distance) * force;
+                        fy -= (dy / distance) * force;
+                    }
+                }
+                
+                // Update velocity with forces
+                this.vx = (this.vx + fx) * damping;
+                this.vy = (this.vy + fy) * damping;
+                
+                // Update position
                 this.x += this.vx;
                 this.y += this.vy;
                 
-                // Bounce off edges
-                if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
-                if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+                // Boundary handling with soft bounce
+                const margin = 50;
+                if (this.x < margin) {
+                    this.x = margin;
+                    this.vx *= -0.8;
+                } else if (this.x > canvas.width - margin) {
+                    this.x = canvas.width - margin;
+                    this.vx *= -0.8;
+                }
+                if (this.y < margin) {
+                    this.y = margin;
+                    this.vy *= -0.8;
+                } else if (this.y > canvas.height - margin) {
+                    this.y = canvas.height - margin;
+                    this.vy *= -0.8;
+                }
                 
-                // Keep in bounds
-                this.x = Math.max(0, Math.min(canvas.width, this.x));
-                this.y = Math.max(0, Math.min(canvas.height, this.y));
+                // Pulse animation
+                this.pulsePhase += this.pulseSpeed;
+                const pulse = Math.sin(this.pulsePhase) * 0.3 + 0.7;
+                this.hue = this.baseHue + Math.sin(this.pulsePhase * 0.5) * 10;
             }
             
-            draw() {
-                // Glow effect
-                const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius * 3);
-                gradient.addColorStop(0, `hsla(${this.hue}, 70%, 60%, 0.8)`);
-                gradient.addColorStop(0.5, `hsla(${this.hue}, 70%, 60%, 0.3)`);
-                gradient.addColorStop(1, `hsla(${this.hue}, 70%, 60%, 0)`);
+            draw(ctx) {
+                // Outer glow with pulse
+                const glowRadius = this.radius * 4;
+                const gradient = ctx.createRadialGradient(
+                    this.x, this.y, 0,
+                    this.x, this.y, glowRadius
+                );
+                const pulse = Math.sin(this.pulsePhase) * 0.2 + 0.3;
+                gradient.addColorStop(0, `hsla(${this.hue}, 80%, ${this.brightness}%, ${pulse * 0.6})`);
+                gradient.addColorStop(0.5, `hsla(${this.hue}, 70%, ${this.brightness}%, ${pulse * 0.3})`);
+                gradient.addColorStop(1, `hsla(${this.hue}, 60%, ${this.brightness}%, 0)`);
                 
                 ctx.fillStyle = gradient;
                 ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius * 3, 0, Math.PI * 2);
+                ctx.arc(this.x, this.y, glowRadius, 0, Math.PI * 2);
                 ctx.fill();
                 
-                // Node
-                ctx.fillStyle = `hsl(${this.hue}, 70%, 60%)`;
+                // Inner core
+                const coreGradient = ctx.createRadialGradient(
+                    this.x, this.y, 0,
+                    this.x, this.y, this.radius * 1.5
+                );
+                coreGradient.addColorStop(0, `hsl(${this.hue}, 90%, ${this.brightness + 10}%)`);
+                coreGradient.addColorStop(1, `hsl(${this.hue}, 80%, ${this.brightness}%)`);
+                
+                ctx.fillStyle = coreGradient;
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Highlight
+                ctx.fillStyle = `hsla(${this.hue}, 100%, 90%, 0.6)`;
+                ctx.beginPath();
+                ctx.arc(this.x - this.radius * 0.3, this.y - this.radius * 0.3, this.radius * 0.4, 0, Math.PI * 2);
                 ctx.fill();
             }
         }
@@ -491,8 +563,10 @@ def generate_html(leaderboard):
             nodes.push(new Node());
         }
         
-        // Draw connections
-        function drawConnections() {
+        // Draw connections with improved visuals
+        function drawConnections(ctx) {
+            const connections = [];
+            
             for (let i = 0; i < nodes.length; i++) {
                 for (let j = i + 1; j < nodes.length; j++) {
                     const dx = nodes[i].x - nodes[j].x;
@@ -500,63 +574,99 @@ def generate_html(leaderboard):
                     const distance = Math.sqrt(dx * dx + dy * dy);
                     
                     if (distance < connectionDistance) {
-                        const opacity = (1 - distance / connectionDistance) * 0.3;
-                        const gradient = ctx.createLinearGradient(
-                            nodes[i].x, nodes[i].y,
-                            nodes[j].x, nodes[j].y
-                        );
-                        gradient.addColorStop(0, `hsla(${nodes[i].hue}, 70%, 60%, ${opacity})`);
-                        gradient.addColorStop(1, `hsla(${nodes[j].hue}, 70%, 60%, ${opacity})`);
-                        
-                        ctx.strokeStyle = gradient;
-                        ctx.lineWidth = 1;
-                        ctx.beginPath();
-                        ctx.moveTo(nodes[i].x, nodes[i].y);
-                        ctx.lineTo(nodes[j].x, nodes[j].y);
-                        ctx.stroke();
+                        connections.push({
+                            from: nodes[i],
+                            to: nodes[j],
+                            distance: distance,
+                            strength: 1 - (distance / connectionDistance)
+                        });
                     }
                 }
             }
+            
+            // Sort by distance to draw closer connections on top
+            connections.sort((a, b) => b.distance - a.distance);
+            
+            // Draw connections
+            connections.forEach(conn => {
+                const opacity = conn.strength * 0.4;
+                const lineWidth = 0.5 + conn.strength * 1.5;
+                
+                // Create gradient for connection
+                const gradient = ctx.createLinearGradient(
+                    conn.from.x, conn.from.y,
+                    conn.to.x, conn.to.y
+                );
+                gradient.addColorStop(0, `hsla(${conn.from.hue}, 70%, 60%, ${opacity})`);
+                gradient.addColorStop(0.5, `hsla(${(conn.from.hue + conn.to.hue) / 2}, 80%, 65%, ${opacity * 1.2})`);
+                gradient.addColorStop(1, `hsla(${conn.to.hue}, 70%, 60%, ${opacity})`);
+                
+                ctx.strokeStyle = gradient;
+                ctx.lineWidth = lineWidth;
+                ctx.shadowBlur = 3;
+                ctx.shadowColor = `hsla(${(conn.from.hue + conn.to.hue) / 2}, 70%, 60%, ${opacity})`;
+                ctx.beginPath();
+                ctx.moveTo(conn.from.x, conn.from.y);
+                ctx.lineTo(conn.to.x, conn.to.y);
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+            });
+        }
+        
+        // Mouse interaction
+        let mouseX = canvas.width / 2;
+        let mouseY = canvas.height / 2;
+        let targetMouseX = mouseX;
+        let targetMouseY = mouseY;
+        
+        canvas.addEventListener('mousemove', (e) => {
+            targetMouseX = e.clientX;
+            targetMouseY = e.clientY;
+        });
+        
+        // Smooth mouse tracking
+        function updateMouse() {
+            mouseX += (targetMouseX - mouseX) * 0.1;
+            mouseY += (targetMouseY - mouseY) * 0.1;
         }
         
         // Animation loop
         function animate() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            updateMouse();
             
-            // Update and draw nodes
+            // Semi-transparent background for trail effect
+            ctx.fillStyle = 'rgba(10, 14, 39, 0.15)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Update nodes with physics
             nodes.forEach(node => {
-                node.update();
-                node.draw();
+                // Mouse repulsion
+                const dx = node.x - mouseX;
+                const dy = node.y - mouseY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < 150 && distance > 0) {
+                    const force = (150 - distance) / 150 * 0.05;
+                    node.vx += (dx / distance) * force;
+                    node.vy += (dy / distance) * force;
+                }
+                
+                node.update(nodes);
             });
             
-            // Draw connections
-            drawConnections();
+            // Draw connections first (behind nodes)
+            drawConnections(ctx);
+            
+            // Draw nodes on top
+            nodes.forEach(node => {
+                node.draw(ctx);
+            });
             
             requestAnimationFrame(animate);
         }
         
         // Start animation
         animate();
-        
-        // Add mouse interaction
-        let mouseX = 0, mouseY = 0;
-        canvas.addEventListener('mousemove', (e) => {
-            mouseX = e.clientX;
-            mouseY = e.clientY;
-            
-            // Repel nodes near mouse
-            nodes.forEach(node => {
-                const dx = node.x - mouseX;
-                const dy = node.y - mouseY;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                
-                if (distance < 100) {
-                    const force = (100 - distance) / 100;
-                    node.vx += (dx / distance) * force * 0.1;
-                    node.vy += (dy / distance) * force * 0.1;
-                }
-            });
-        });
     </script>
 </body>
 </html>"""
