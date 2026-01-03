@@ -133,11 +133,21 @@ This metric:
 
 ## 📋 Constraints
 
-To ensure fair competition and focus on GNN methods:
+To ensure fair competition and focus on scalable GNN methods:
 
-1. **No External Data**
-2. **DGL Methods Only**
-3. **Graph Features Only**
+1. **No External Data**  
+   Only the provided graph and features may be used.
+
+2. **Graph Features Only**  
+   No handcrafted features or external embeddings are allowed.
+
+3. **Train on CPU Only**  
+   - Models must be trainable on a standard CPU environment.
+   - Participants are encouraged to use **efficient training strategies** such as:
+     - neighbor sampling 
+     - subgraph or mini-batch training
+     - memory-efficient message passing
+   - Full-batch training on the entire graph is discouraged if it leads to excessive computation time or memory usage.
 
 
 
@@ -145,34 +155,30 @@ To ensure fair competition and focus on GNN methods:
 
 ### Submission Process
 
-1. **Fork this repository** to your GitHub account
+1. **Fork this repository** to your GitHub account.
 
-2. **Download the dataset** and place files in `data/processed/`:
+2. **Use the provided data**, located in `data/processed/`:
    - `train.parquet`
    - `test_features.parquet`
 
-3. **Create your model** using the starter code or your own implementation
+3. **Build your model** using the starter code or your own implementation.
 
-4. **Generate predictions** for the test set and save as CSV:
-   ```bash
+4. **Generate predictions** for the test set and save them as a CSV file with the required format:
 
-   Your submission should be a CSV file with columns:
-- `user_id`: User identifier
-- `snapshot_id`: Snapshot identifier
-- `predicted_role`: Predicted next role (0-4)
-   ```
+   **Required columns:**
+   - `user_id`: User identifier  
+   - `snapshot_id`: Snapshot identifier  
+   - `predicted_role`: Predicted next role (integer values from 0 to 4)
 
-```bash
-Example:
+   **Example submission:**
+   ```csv
+   user_id,snapshot_id,predicted_role
+   123,5,2
+   456,5,3
+   789,6,1 ```
 
-user_id,snapshot_id,predicted_role
-123,5,2
-456,5,3
-789,6,1
+**Your submission file should be named: submissions/your_team_name.csv**
 
-#Your submission file should be named: submissions/your_team_name.csv
-```
-   
 
 5. **Score Your Submission**
 
