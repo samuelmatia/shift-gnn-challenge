@@ -1,5 +1,5 @@
 {
-  "last_updated": "2025-12-20T23:10:13.617432",
+  "last_updated": "2026-01-03T15:35:32.852261",
   "submissions": [
     {
       "team": "test_team",
@@ -8,6 +8,14 @@
       "overall_f1": 0.338324,
       "rare_f1": 0.0,
       "timestamp": "2025-12-20T23:10:13.579795"
+    },
+    {
+      "team": "test_team_SAM2",
+      "submission_file": "submissions/test_team_SAM2.csv",
+      "weighted_f1": 0.211327,
+      "overall_f1": 0.338324,
+      "rare_f1": 0.0,
+      "timestamp": "2026-01-03T15:35:32.815176"
     },
     {
       "team": "test_team_SAM",
