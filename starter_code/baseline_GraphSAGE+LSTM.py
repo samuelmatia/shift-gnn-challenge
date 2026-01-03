@@ -662,7 +662,7 @@ def train_model():
         'predicted_role': test_preds
     })
     
-    os.makedirs('../submissions', exist_ok=True)
+    os.makedirs('./submissions', exist_ok=True)
     submission.to_csv('./submissions/team_sam_GraphSAGE+LSTM_1epoch_training.csv', index=False)
     print("Saved predictions to ./team_sam_GraphSAGE+LSTM_1epoch_training.csv")
     
