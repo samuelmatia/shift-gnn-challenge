@@ -419,12 +419,12 @@ def generate_html_leaderboard(leaderboard):
         // Enhanced Graph Network Background
         const nodes = [];
         const nodeCount = 80;
-        const connectionDistance = 200;
-        const minDistance = 80;
-        const maxDistance = 250;
-        const attractionForce = 0.0001;
-        const repulsionForce = 0.02;
-        const damping = 0.95;
+        const connectionDistance = 280;
+        const minDistance = 120;
+        const maxDistance = 350;
+        const attractionForce = 0.00003; // Réduite pour éviter la contraction
+        const repulsionForce = 0.05; // Augmentée pour maintenir l'espacement
+        const damping = 0.92; // Réduit pour moins de mouvement
         
         // Initialize nodes with better distribution
         class Node {
@@ -455,16 +455,23 @@ def generate_html_leaderboard(leaderboard):
                     
                     if (distance < 0.1) continue;
                     
-                    // Attraction for nearby nodes
+                    // Attraction très faible pour maintenir les connexions visuelles
                     if (distance < maxDistance && distance > minDistance) {
-                        const force = (distance - minDistance) * attractionForce;
+                        const force = (maxDistance - distance) * attractionForce; // Attraction vers maxDistance
                         fx += (dx / distance) * force;
                         fy += (dy / distance) * force;
                     }
                     
-                    // Repulsion for very close nodes
+                    // Repulsion forte pour les nœuds proches
                     if (distance < minDistance) {
-                        const force = repulsionForce / (distance * distance);
+                        const force = repulsionForce / (distance * distance + 1);
+                        fx -= (dx / distance) * force;
+                        fy -= (dy / distance) * force;
+                    }
+                    
+                    // Répulsion légère même au-delà de minDistance pour maintenir l'espacement
+                    if (distance < minDistance * 1.5) {
+                        const force = (repulsionForce * 0.3) / (distance * distance + 100);
                         fx -= (dx / distance) * force;
                         fy -= (dy / distance) * force;
                     }
