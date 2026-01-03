@@ -416,95 +416,79 @@ def generate_html_leaderboard(leaderboard):
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
         
-        // Enhanced Graph Network Background
+        // Enhanced Graph Network Background - Fixed size with subtle animation
         const nodes = [];
         const nodeCount = 80;
         const connectionDistance = 280;
         const minDistance = 120;
         const maxDistance = 350;
-        const attractionForce = 0.00003; // Réduite pour éviter la contraction
-        const repulsionForce = 0.05; // Augmentée pour maintenir l'espacement
-        const damping = 0.92; // Réduit pour moins de mouvement
+        const springForce = 0.0001; // Force de rappel vers position initiale
+        const repulsionForce = 0.01; // Répulsion minimale pour éviter les collisions
+        const damping = 0.98; // Damping élevé pour mouvements subtils
+        const animationAmplitude = 3; // Amplitude des petits mouvements
         
         // Initialize nodes with better distribution
         class Node {
             constructor() {
-                this.x = Math.random() * canvas.width;
-                this.y = Math.random() * canvas.height;
-                this.vx = (Math.random() - 0.5) * 0.3;
-                this.vy = (Math.random() - 0.5) * 0.3;
+                this.initialX = Math.random() * canvas.width;
+                this.initialY = Math.random() * canvas.height;
+                this.x = this.initialX;
+                this.y = this.initialY;
+                this.vx = 0;
+                this.vy = 0;
                 this.radius = Math.random() * 2.5 + 1.5;
                 this.baseHue = Math.random() * 60 + 240; // Purple/blue range
                 this.hue = this.baseHue;
                 this.brightness = 50 + Math.random() * 20;
                 this.pulsePhase = Math.random() * Math.PI * 2;
-                this.pulseSpeed = 0.02 + Math.random() * 0.02;
-                this.connections = [];
+                this.pulseSpeed = 0.01 + Math.random() * 0.01;
+                this.oscillationPhase = Math.random() * Math.PI * 2;
+                this.oscillationSpeed = 0.005 + Math.random() * 0.005;
+                this.oscillationRadius = 2 + Math.random() * 3; // Rayon d'oscillation
             }
             
             update(others) {
-                // Apply physics forces
-                let fx = 0, fy = 0;
+                // Force de rappel vers la position initiale (spring)
+                const dx = this.initialX - this.x;
+                const dy = this.initialY - this.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
                 
+                if (distance > 0.1) {
+                    const spring = springForce * distance;
+                    this.vx += (dx / distance) * spring;
+                    this.vy += (dy / distance) * spring;
+                }
+                
+                // Petite répulsion pour éviter les collisions
                 for (let other of others) {
                     if (other === this) continue;
                     
                     const dx = other.x - this.x;
                     const dy = other.y - this.y;
-                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    const dist = Math.sqrt(dx * dx + dy * dy);
                     
-                    if (distance < 0.1) continue;
-                    
-                    // Attraction très faible pour maintenir les connexions visuelles
-                    if (distance < maxDistance && distance > minDistance) {
-                        const force = (maxDistance - distance) * attractionForce; // Attraction vers maxDistance
-                        fx += (dx / distance) * force;
-                        fy += (dy / distance) * force;
-                    }
-                    
-                    // Repulsion forte pour les nœuds proches
-                    if (distance < minDistance) {
-                        const force = repulsionForce / (distance * distance + 1);
-                        fx -= (dx / distance) * force;
-                        fy -= (dy / distance) * force;
-                    }
-                    
-                    // Répulsion légère même au-delà de minDistance pour maintenir l'espacement
-                    if (distance < minDistance * 1.5) {
-                        const force = (repulsionForce * 0.3) / (distance * distance + 100);
-                        fx -= (dx / distance) * force;
-                        fy -= (dy / distance) * force;
+                    if (dist < minDistance && dist > 0.1) {
+                        const force = repulsionForce / (dist * dist + 1);
+                        this.vx -= (dx / dist) * force;
+                        this.vy -= (dy / dist) * force;
                     }
                 }
                 
-                // Update velocity with forces
-                this.vx = (this.vx + fx) * damping;
-                this.vy = (this.vy + fy) * damping;
+                // Petits mouvements oscillatoires subtils
+                this.oscillationPhase += this.oscillationSpeed;
+                const oscX = Math.cos(this.oscillationPhase) * this.oscillationRadius;
+                const oscY = Math.sin(this.oscillationPhase * 1.3) * this.oscillationRadius;
                 
-                // Update position
-                this.x += this.vx;
-                this.y += this.vy;
+                // Appliquer damping et mettre à jour la position
+                this.vx *= damping;
+                this.vy *= damping;
                 
-                // Boundary handling with soft bounce
-                const margin = 50;
-                if (this.x < margin) {
-                    this.x = margin;
-                    this.vx *= -0.8;
-                } else if (this.x > canvas.width - margin) {
-                    this.x = canvas.width - margin;
-                    this.vx *= -0.8;
-                }
-                if (this.y < margin) {
-                    this.y = margin;
-                    this.vy *= -0.8;
-                } else if (this.y > canvas.height - margin) {
-                    this.y = canvas.height - margin;
-                    this.vy *= -0.8;
-                }
+                // Position avec oscillation subtile
+                this.x = this.initialX + oscX + this.vx;
+                this.y = this.initialY + oscY + this.vy;
                 
-                // Pulse animation
+                // Pulse animation pour la couleur
                 this.pulsePhase += this.pulseSpeed;
-                const pulse = Math.sin(this.pulsePhase) * 0.3 + 0.7;
                 this.hue = this.baseHue + Math.sin(this.pulsePhase * 0.5) * 10;
             }
             
@@ -628,13 +612,13 @@ def generate_html_leaderboard(leaderboard):
             
             // Update nodes with physics
             nodes.forEach(node => {
-                // Mouse repulsion
+                // Mouse repulsion (très subtile pour ne pas déplacer trop)
                 const dx = node.x - mouseX;
                 const dy = node.y - mouseY;
                 const distance = Math.sqrt(dx * dx + dy * dy);
                 
                 if (distance < 150 && distance > 0) {
-                    const force = (150 - distance) / 150 * 0.05;
+                    const force = (150 - distance) / 150 * 0.01; // Réduite
                     node.vx += (dx / distance) * force;
                     node.vy += (dy / distance) * force;
                 }
