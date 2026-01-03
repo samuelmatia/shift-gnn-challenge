@@ -5,88 +5,67 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GNN Challenge - Leaderboard</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-        .container {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             max-width: 1200px;
             margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
         }
-        .header {
+        h1 {
+            color: #2c3e50;
             text-align: center;
-            color: white;
-            margin-bottom: 30px;
-        }
-        .header h1 {
-            font-size: 2.5em;
             margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
-        .header p {
-            font-size: 1.2em;
-            opacity: 0.9;
+        .subtitle {
+            text-align: center;
+            color: #7f8c8d;
+            margin-bottom: 30px;
         }
         .last-updated {
             text-align: center;
-            color: white;
-            margin-bottom: 20px;
-            opacity: 0.8;
-        }
-        .leaderboard {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            overflow: hidden;
+            color: #95a5a6;
+            font-size: 0.9em;
+            margin-bottom: 30px;
         }
         table {
             width: 100%;
             border-collapse: collapse;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
         }
         thead {
-            background: #2c3e50;
+            background: #3498db;
             color: white;
         }
         th {
-            padding: 18px;
+            padding: 15px;
             text-align: left;
             font-weight: 600;
-            font-size: 0.95em;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
         }
-        tbody tr {
+        td {
+            padding: 12px 15px;
             border-bottom: 1px solid #ecf0f1;
-            transition: background 0.2s;
         }
         tbody tr:hover {
             background: #f8f9fa;
         }
-        tbody tr:last-child {
+        tbody tr:last-child td {
             border-bottom: none;
-        }
-        td {
-            padding: 15px 18px;
         }
         .rank {
             font-weight: bold;
-            font-size: 1.1em;
-            width: 80px;
+            color: #2c3e50;
+            width: 60px;
         }
-        .rank-1 { color: #f39c12; }
-        .rank-2 { color: #95a5a6; }
-        .rank-3 { color: #e67e22; }
-        .medal {
-            font-size: 1.3em;
-            margin-right: 5px;
-        }
+        .rank-1 { color: #f39c12; font-size: 1.2em; }
+        .rank-2 { color: #95a5a6; font-size: 1.1em; }
+        .rank-3 { color: #e67e22; font-size: 1.05em; }
         .team-name {
             font-weight: 600;
             color: #2c3e50;
-            font-size: 1.05em;
         }
         .score {
             font-family: 'Courier New', monospace;
@@ -94,74 +73,43 @@
         }
         .primary-score {
             color: #27ae60;
-            font-size: 1.15em;
+            font-size: 1.1em;
+        }
+        .medal {
+            font-size: 1.5em;
         }
         .empty {
             text-align: center;
-            padding: 60px;
+            padding: 40px;
             color: #95a5a6;
-            font-size: 1.1em;
-        }
-        .footer {
-            text-align: center;
-            margin-top: 30px;
-            color: white;
-            opacity: 0.9;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>🏆 GNN Challenge Leaderboard</h1>
-            <p>Role Transition Prediction in Temporal Networks</p>
-        </div>
-        <p class="last-updated">Last updated: January 03, 2026 at 15:35:32</p>
-        
-        <div class="leaderboard">
-            <table>
-                <thead>
-                    <tr>
-                        <th class="rank">Rank</th>
-                        <th>Team</th>
-                        <th class="score primary-score">Weighted Macro-F1</th>
-                        <th class="score">Overall Macro-F1</th>
-                        <th class="score">Rare Transitions F1</th>
-                        <th>Submission Time</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td class="rank rank-1"><span class="medal">🥇 </span>1</td>
-                        <td class="team-name">test_team</td>
-                        <td class="score primary-score">0.211327</td>
-                        <td class="score">0.338324</td>
-                        <td class="score">0.000000</td>
-                        <td>December 20, 2025 at 23:10:13</td>
-                    </tr>
-                    <tr>
-                        <td class="rank rank-2"><span class="medal">🥈 </span>2</td>
-                        <td class="team-name">test_team_SAM2</td>
-                        <td class="score primary-score">0.211327</td>
-                        <td class="score">0.338324</td>
-                        <td class="score">0.000000</td>
-                        <td>January 03, 2026 at 15:35:32</td>
-                    </tr>
-                    <tr>
-                        <td class="rank rank-3"><span class="medal">🥉 </span>3</td>
-                        <td class="team-name">test_team_SAM</td>
-                        <td class="score primary-score">0.181318</td>
-                        <td class="score">0.326013</td>
-                        <td class="score">0.000000</td>
-                        <td>December 20, 2025 at 23:10:13</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        
-        <div class="footer">
-            <p>Submit your solution via Pull Request to appear on the leaderboard!</p>
-        </div>
-    </div>
+    <h1>🏆 GNN Challenge Leaderboard</h1>
+    <p class="subtitle">Role Transition Prediction in Temporal Networks</p>
+    <p class="last-updated">Last updated: 2026-01-03T17:00:21.219074</p>
+    
+    <table>
+        <thead>
+            <tr>
+                <th class="rank">Rank</th>
+                <th>Team</th>
+                <th class="score primary-score">Weighted Macro-F1</th>
+                <th class="score">Overall Macro-F1</th>
+                <th class="score">Rare Transitions F1</th>
+                <th>Submission Time</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td colspan="6" class="empty">No submissions yet. Be the first!</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <p style="text-align: center; margin-top: 30px; color: #95a5a6; font-size: 0.9em;">
+        Submit your solution via Pull Request to appear on the leaderboard!
+    </p>
 </body>
 </html>
