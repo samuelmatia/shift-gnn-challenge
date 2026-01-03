@@ -167,12 +167,13 @@ To ensure fair competition and focus on scalable GNN methods:
    - `predicted_role`: Predicted next role (integer values from 0 to 4)
 
    **Example submission:**
-   ```csv
+```csv
    user_id,snapshot_id,predicted_role
    123,5,2
    456,5,3
    789,6,1 
 ```
+
 **Your submission file should be named: submissions/your_team_name.csv**
 
 
