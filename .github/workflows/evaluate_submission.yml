@@ -20,7 +20,7 @@ jobs:
     
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
         ref: ${{ github.event.pull_request.head.ref || github.ref }}
@@ -172,7 +172,7 @@ jobs:
     
     - name: Upload leaderboard artifacts (for PR)
       if: success() && github.event_name == 'pull_request'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: leaderboard-update
         path: |
