@@ -57,8 +57,26 @@ def update_leaderboard(submission_file, team_name, weighted_f1, overall_f1, rare
         leaderboard["submissions"].append(entry)
         print(f"Added new entry for {team_name}")
     
+    # Filter out submissions whose files don't exist
+    submissions_dir = Path("submissions")
+    valid_submissions = []
+    
+    for entry in leaderboard["submissions"]:
+        # Check if the submission file exists
+        submission_file = Path(entry.get('submission_file', f"submissions/{entry['team']}.csv"))
+        
+        # Try both the stored path and the default path
+        if not submission_file.exists():
+            submission_file = submissions_dir / f"{entry['team']}.csv"
+        
+        if submission_file.exists():
+            valid_submissions.append(entry)
+        else:
+            print(f"Removing {entry['team']} from leaderboard (file not found)")
+    
     # Sort by weighted_f1 (descending)
-    leaderboard["submissions"].sort(key=lambda x: x["weighted_f1"], reverse=True)
+    valid_submissions.sort(key=lambda x: x["weighted_f1"], reverse=True)
+    leaderboard["submissions"] = valid_submissions
     
     # Save to JSON
     save_leaderboard(leaderboard)

@@ -65,13 +65,29 @@ def generate_leaderboard():
         if team not in existing_map or entry['weighted_f1'] > existing_map[team]['weighted_f1']:
             existing_map[team] = entry
     
-    # Convert to list and sort
-    submissions = list(existing_map.values())
-    submissions.sort(key=lambda x: x['weighted_f1'], reverse=True)
+    # Filter out submissions whose files don't exist
+    submissions_dir = Path(__file__).parent.parent / 'submissions'
+    valid_submissions = []
+    
+    for entry in existing_map.values():
+        # Check if the submission file exists
+        submission_file = Path(entry.get('submission_file', f"submissions/{entry['team']}.csv"))
+        
+        # Try both the stored path and the default path
+        if not submission_file.exists():
+            submission_file = submissions_dir / f"{entry['team']}.csv"
+        
+        if submission_file.exists():
+            valid_submissions.append(entry)
+        else:
+            print(f"Removing {entry['team']} from leaderboard (file not found)")
+    
+    # Sort and save
+    valid_submissions.sort(key=lambda x: x['weighted_f1'], reverse=True)
     
     leaderboard = {
         'last_updated': datetime.now().isoformat(),
-        'submissions': submissions
+        'submissions': valid_submissions
     }
     
     # Save JSON
@@ -82,7 +98,7 @@ def generate_leaderboard():
     # Generate HTML
     generate_html(leaderboard)
     
-    print(f"Generated leaderboard with {len(submissions)} teams")
+    print(f"Generated leaderboard with {len(valid_submissions)} teams")
     return leaderboard
 
 def generate_html(leaderboard):

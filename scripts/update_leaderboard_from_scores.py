@@ -45,17 +45,33 @@ with open(scores_file, 'r') as f:
                 existing_map[team] = entry
                 print(f"Updated entry for {team}: {weighted_f1:.6f}")
 
+# Filter out submissions whose files don't exist
+submissions_dir = Path("submissions")
+valid_submissions = []
+
+for entry in existing_map.values():
+    # Check if the submission file exists
+    submission_file = Path(entry.get('submission_file', f"submissions/{entry['team']}.csv"))
+    
+    # Try both the stored path and the default path
+    if not submission_file.exists():
+        submission_file = submissions_dir / f"{entry['team']}.csv"
+    
+    if submission_file.exists():
+        valid_submissions.append(entry)
+    else:
+        print(f"Removing {entry['team']} from leaderboard (file not found)")
+
 # Sort and save
-submissions = list(existing_map.values())
-submissions.sort(key=lambda x: x['weighted_f1'], reverse=True)
+valid_submissions.sort(key=lambda x: x['weighted_f1'], reverse=True)
 
 leaderboard = {
     'last_updated': datetime.now().isoformat(),
-    'submissions': submissions
+    'submissions': valid_submissions
 }
 
 with open(leaderboard_file, 'w') as f:
     json.dump(leaderboard, f, indent=2)
 
-print(f"Leaderboard updated with {len(submissions)} teams")
+print(f"Leaderboard updated with {len(valid_submissions)} teams")
 
