@@ -23,6 +23,12 @@ jobs:
       uses: actions/checkout@v3
       with:
         fetch-depth: 0
+        ref: ${{ github.event.pull_request.head.ref || github.ref }}
+    
+    - name: Fetch base branch (for PR comparison)
+      if: github.event_name == 'pull_request'
+      run: |
+        git fetch origin ${{ github.base_ref }}:${{ github.base_ref }} || true
     
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -141,7 +147,7 @@ jobs:
           });
     
     - name: Commit and push leaderboard
-      if: success()
+      if: success() && github.event_name == 'push'
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
@@ -163,3 +169,13 @@ jobs:
         
         git diff --staged --quiet || git commit -m "Auto-update leaderboard [skip ci]"
         git push || echo "Nothing to push"
+    
+    - name: Upload leaderboard artifacts (for PR)
+      if: success() && github.event_name == 'pull_request'
+      uses: actions/upload-artifact@v3
+      with:
+        name: leaderboard-update
+        path: |
+          leaderboard.json
+          leaderboard.html
+        retention-days: 1
