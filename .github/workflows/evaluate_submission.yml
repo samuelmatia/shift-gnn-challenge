@@ -20,7 +20,7 @@ jobs:
     
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
     
@@ -141,7 +141,7 @@ jobs:
           });
     
     - name: Commit and push leaderboard
-      if: success()
+      if: success() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
@@ -163,3 +163,13 @@ jobs:
         
         git diff --staged --quiet || git commit -m "Auto-update leaderboard [skip ci]"
         git push || echo "Nothing to push"
+    
+    - name: Upload leaderboard artifacts (for PR)
+      if: success() && github.event_name == 'pull_request'
+      uses: actions/upload-artifact@v4
+      with:
+        name: leaderboard-update
+        path: |
+          leaderboard.json
+          leaderboard.html
+        retention-days: 1
