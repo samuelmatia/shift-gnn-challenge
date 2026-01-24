@@ -29,6 +29,8 @@ jobs:
       if: github.event_name == 'pull_request'
       run: |
         git fetch origin ${{ github.base_ref }}:${{ github.base_ref }} || true
+        # Also fetch the base ref as a remote tracking branch
+        git fetch origin ${{ github.base_ref }} || true
     
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -63,7 +65,9 @@ jobs:
           FILES=$(find submissions -name "*.csv" -not -name "sample*" | tr '\n' ' ')
         elif [ "${{ github.event_name }}" == "pull_request" ]; then
           # PR - find changed CSV files
-          FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '^submissions/.*\.csv$' | tr '\n' ' ' || echo "")
+          # Try both origin/base_ref and local base_ref (after fetch)
+          FILES=$(git diff --name-only ${{ github.base_ref }}...HEAD 2>/dev/null | grep -E '^submissions/.*\.csv$' | tr '\n' ' ' || \
+                  git diff --name-only origin/${{ github.base_ref }}...HEAD 2>/dev/null | grep -E '^submissions/.*\.csv$' | tr '\n' ' ' || echo "")
         else
           # Push to main - find all CSV files (not samples) that are tracked in git
           FILES=$(git ls-files submissions/*.csv | grep -v sample | tr '\n' ' ' || echo "")
