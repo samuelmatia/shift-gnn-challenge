@@ -39,9 +39,59 @@ def load_existing_leaderboard():
             return json.load(f)
     return {"last_updated": None, "submissions": []}
 
+def clean_leaderboard():
+    """Quickly clean leaderboard by removing entries whose files don't exist."""
+    existing = load_existing_leaderboard()
+    submissions_dir = Path(__file__).parent.parent / 'submissions'
+    
+    # Filter out submissions whose files don't exist
+    valid_submissions = []
+    
+    for entry in existing.get('submissions', []):
+        # Check if the submission file exists
+        submission_file = Path(entry.get('submission_file', f"submissions/{entry['team']}.csv"))
+        
+        # Try both the stored path and the default path
+        if not submission_file.exists():
+            submission_file = submissions_dir / f"{entry['team']}.csv"
+        
+        if submission_file.exists():
+            valid_submissions.append(entry)
+        else:
+            print(f"Removing {entry['team']} from leaderboard (file not found)")
+    
+    # Sort and save
+    valid_submissions.sort(key=lambda x: x['weighted_f1'], reverse=True)
+    
+    leaderboard = {
+        'last_updated': datetime.now().isoformat(),
+        'submissions': valid_submissions
+    }
+    
+    # Save JSON
+    leaderboard_file = Path(__file__).parent.parent / 'leaderboard.json'
+    with open(leaderboard_file, 'w') as f:
+        json.dump(leaderboard, f, indent=2)
+    
+    # Generate HTML
+    generate_html(leaderboard)
+    
+    print(f"Cleaned leaderboard: {len(valid_submissions)} teams remaining")
+    return leaderboard
+
 def generate_leaderboard():
     """Generate leaderboard from all results."""
+    # Check if evaluation_results.json exists and has content
+    results_file = Path(__file__).parent.parent / 'evaluation_results.json'
+    if not results_file.exists():
+        # No evaluation results, just clean existing leaderboard
+        return clean_leaderboard()
+    
     results = load_evaluation_results()
+    if not results:
+        # No results to process, just clean existing leaderboard
+        return clean_leaderboard()
+    
     existing = load_existing_leaderboard()
     
     # Create a map of existing submissions
@@ -685,5 +735,10 @@ def generate_html(leaderboard):
     print(f"Generated {html_file}")
 
 if __name__ == '__main__':
-    generate_leaderboard()
+    import sys
+    # If --clean flag is passed, use fast cleaning function
+    if '--clean' in sys.argv or '-c' in sys.argv:
+        clean_leaderboard()
+    else:
+        generate_leaderboard()
 

@@ -45,22 +45,19 @@ with open(scores_file, 'r') as f:
                 existing_map[team] = entry
                 print(f"Updated entry for {team}: {weighted_f1:.6f}")
 
-# Filter out submissions whose files don't exist
+# Quick filter: only check files for entries we're keeping
 submissions_dir = Path("submissions")
 valid_submissions = []
 
 for entry in existing_map.values():
-    # Check if the submission file exists
-    submission_file = Path(entry.get('submission_file', f"submissions/{entry['team']}.csv"))
-    
-    # Try both the stored path and the default path
-    if not submission_file.exists():
-        submission_file = submissions_dir / f"{entry['team']}.csv"
+    # Check if the submission file exists (quick check)
+    team = entry['team']
+    submission_file = submissions_dir / f"{team}.csv"
     
     if submission_file.exists():
         valid_submissions.append(entry)
     else:
-        print(f"Removing {entry['team']} from leaderboard (file not found)")
+        print(f"Removing {team} from leaderboard (file not found)")
 
 # Sort and save
 valid_submissions.sort(key=lambda x: x['weighted_f1'], reverse=True)
