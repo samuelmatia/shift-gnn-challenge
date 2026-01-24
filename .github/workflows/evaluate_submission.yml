@@ -131,7 +131,7 @@ jobs:
           }
           
           comment += "The leaderboard will be updated if your submission is valid.\n";
-          comment += "👉 [View Leaderboard](leaderboard.html)";
+          comment += "👉 [View Leaderboard](https://samuelmatia.github.io/gnn-role-transition-challenge/leaderboard.html)";
           
           github.rest.issues.createComment({
             issue_number: context.issue.number,
@@ -145,6 +145,21 @@ jobs:
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
+        
+        # Add leaderboard files
         git add leaderboard.json leaderboard.html
+        
+        # Also ensure any submission files that exist but aren't tracked are added
+        # This handles the case where files were merged but not yet committed
+        if [ -d "submissions" ]; then
+          # Find CSV files in submissions/ that exist but aren't tracked
+          for file in submissions/*.csv; do
+            if [ -f "$file" ] && ! git ls-files --error-unmatch "$file" >/dev/null 2>&1; then
+              echo "Adding untracked submission file: $file"
+              git add "$file"
+            fi
+          done
+        fi
+        
         git diff --staged --quiet || git commit -m "Auto-update leaderboard [skip ci]"
         git push || echo "Nothing to push"
