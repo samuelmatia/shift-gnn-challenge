@@ -23,8 +23,8 @@ ENV/
 # OS
 .DS_Store
 Thumbs.db
-GUIDE_REMOVE_SUBMISSION.md
 
+remove_team.py
 # Leaderboard data (will be generated, but we need to commit them for GitHub Pages)
 # Note: These files are auto-generated but must be in the repo for GitHub Pages to work
 # leaderboard.json
