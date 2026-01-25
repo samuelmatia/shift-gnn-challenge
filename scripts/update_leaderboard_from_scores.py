@@ -20,11 +20,6 @@ if not scores_file.exists():
     print("No scores file found")
     sys.exit(1)
 
-# Check if file is empty
-if scores_file.stat().st_size == 0:
-    print("Scores file is empty")
-    sys.exit(1)
-
 existing_map = {sub['team']: sub for sub in leaderboard.get('submissions', [])}
 
 with open(scores_file, 'r') as f:
@@ -51,8 +46,6 @@ with open(scores_file, 'r') as f:
                 print(f"Updated entry for {team}: {weighted_f1:.6f}")
 
 # Quick filter: only check files for entries we're keeping
-# Note: In PR context, we keep all entries from main even if files don't exist in PR branch
-# The files will exist in main after merge
 submissions_dir = Path("submissions")
 valid_submissions = []
 
@@ -64,11 +57,7 @@ for entry in existing_map.values():
     if submission_file.exists():
         valid_submissions.append(entry)
     else:
-        # In PR context, don't remove entries - files exist in main
-        # Only remove if we're sure the file doesn't exist (e.g., after explicit deletion)
-        # For now, keep all entries to preserve leaderboard during PR evaluation
-        valid_submissions.append(entry)
-        print(f"Note: File not found for {team} in current branch, but keeping in leaderboard (may be in main)")
+        print(f"Removing {team} from leaderboard (file not found)")
 
 # Sort and save
 valid_submissions.sort(key=lambda x: x['weighted_f1'], reverse=True)

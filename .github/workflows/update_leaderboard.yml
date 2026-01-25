@@ -7,20 +7,11 @@ on:
     paths:
       - 'submissions/**/*.csv'
   workflow_dispatch:
-  # Also trigger when PRs are merged (even if leaderboard.json changed)
-  pull_request:
-    types:
-      - closed
-    branches:
-      - main
 
 jobs:
   update-leaderboard:
     runs-on: ubuntu-latest
-    if: |
-      github.repository_owner != 'github-actions[bot]' &&
-      (github.event_name == 'push' || 
-       (github.event_name == 'pull_request' && github.event.pull_request.merged == true))
+    if: github.repository_owner != 'github-actions[bot]'
     
     steps:
     - name: Checkout repository
