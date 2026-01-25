@@ -75,7 +75,7 @@ jobs:
         if git diff --staged --quiet; then
           echo "No changes to commit"
         else
-          git commit -m "Auto-update leaderboard"
+          git commit -m "Auto-update leaderboard [skip ci]"
           git push origin main
         fi
 
