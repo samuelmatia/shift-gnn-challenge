@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-01-25T00:36:20.038759",
+  "last_updated": "2026-01-25T01:19:07.761938",
   "submissions": [
     {
       "team": "team_sam_trad_ML_RandomForest",
@@ -8,6 +8,14 @@
       "overall_f1": 0.338324,
       "rare_f1": 0.0,
       "timestamp": "2026-01-03T17:38:21.644031"
+    },
+    {
+      "team": "team_sam_pull_request",
+      "submission_file": "submissions/team_sam_pull_request.csv",
+      "weighted_f1": 0.211327,
+      "overall_f1": 0.338324,
+      "rare_f1": 0.0,
+      "timestamp": "2026-01-25T01:19:07.722074"
     },
     {
       "team": "team_sam_GraphSAGE+LSTM_1epoch_training",
