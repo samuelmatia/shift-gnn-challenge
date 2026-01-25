@@ -2,8 +2,7 @@ name: Evaluate Submission
 
 on:
   pull_request:
-    paths:
-      - 'submissions/**/*.csv'
+    types: [opened, synchronize, reopened]
   push:
     branches:
       - main
@@ -62,12 +61,28 @@ jobs:
       run: |
         if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
           # Manual trigger - find all CSV files in submissions/
-          FILES=$(find submissions -name "*.csv" -not -name "sample*" | tr '\n' ' ')
+          FILES=$(find submissions -name "*.csv" -not -name "sample*" 2>/dev/null | tr '\n' ' ' || echo "")
         elif [ "${{ github.event_name }}" == "pull_request" ]; then
-          # PR - find changed CSV files
-          # Try both origin/base_ref and local base_ref (after fetch)
-          FILES=$(git diff --name-only ${{ github.base_ref }}...HEAD 2>/dev/null | grep -E '^submissions/.*\.csv$' | tr '\n' ' ' || \
-                  git diff --name-only origin/${{ github.base_ref }}...HEAD 2>/dev/null | grep -E '^submissions/.*\.csv$' | tr '\n' ' ' || echo "")
+          # PR - find ALL CSV files in the PR branch (not just changed ones)
+          # This ensures we re-evaluate on every PR update
+          echo "Looking for CSV files in PR branch..."
+          # First, try to find all CSV files in the current branch
+          FILES=$(find submissions -name "*.csv" -not -name "sample*" 2>/dev/null | tr '\n' ' ' || echo "")
+          
+          # If no files found, also check git-tracked files in this branch
+          if [ -z "$FILES" ] || [ "$FILES" = " " ]; then
+            FILES=$(git ls-files submissions/*.csv 2>/dev/null | grep -v sample | tr '\n' ' ' || echo "")
+          fi
+          
+          # Also check for files that were added/modified in this PR
+          CHANGED_FILES=$(git diff --name-only ${{ github.base_ref }}...HEAD 2>/dev/null | grep -E '^submissions/.*\.csv$' | tr '\n' ' ' || \
+                          git diff --name-only origin/${{ github.base_ref }}...HEAD 2>/dev/null | grep -E '^submissions/.*\.csv$' | tr '\n' ' ' || echo "")
+          
+          # Combine both lists (remove duplicates)
+          if [ -n "$CHANGED_FILES" ] && [ "$CHANGED_FILES" != " " ]; then
+            ALL_FILES="$FILES $CHANGED_FILES"
+            FILES=$(echo "$ALL_FILES" | tr ' ' '\n' | sort -u | tr '\n' ' ')
+          fi
         else
           # Push to main - find all CSV files (not samples) that are tracked in git
           # Also check for files that exist but might not be tracked yet
@@ -78,20 +93,26 @@ jobs:
           fi
         fi
         
-        if [ -z "$FILES" ]; then
-          echo "No submission files found"
-          echo "Available files in submissions/:"
-          ls -la submissions/ || echo "submissions/ directory not found"
-          echo "Git tracked files:"
-          git ls-files submissions/ || echo "No tracked files"
-          exit 1
-        fi
+        # Clean up: remove empty strings and extra spaces
+        FILES=$(echo "$FILES" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | tr -s ' ')
         
-        echo "files=$FILES" >> $GITHUB_OUTPUT
-        echo "Found submission files: $FILES"
+        if [ -z "$FILES" ] || [ "$FILES" = " " ]; then
+          echo "⚠️  No submission files found in PR"
+          echo "Available files in submissions/:"
+          ls -la submissions/ 2>/dev/null || echo "submissions/ directory not found"
+          echo "Git tracked files:"
+          git ls-files submissions/ 2>/dev/null || echo "No tracked files"
+          echo "Note: This PR will be evaluated when submission files are added."
+          # Don't exit with error - just skip evaluation
+          echo "files=" >> $GITHUB_OUTPUT
+        else
+          echo "files=$FILES" >> $GITHUB_OUTPUT
+          echo "✅ Found submission files: $FILES"
+        fi
     
     - name: Evaluate submissions
       id: evaluate
+      if: steps.find_submissions.outputs.files != ''
       run: |
         mkdir -p results
         
@@ -114,7 +135,7 @@ jobs:
         fi
     
     - name: Update leaderboard
-      if: success()
+      if: success() && steps.find_submissions.outputs.files != ''
       run: |
         # Ensure results directory exists
         mkdir -p results
@@ -123,19 +144,32 @@ jobs:
         python scripts/update_leaderboard_from_scores.py
     
     - name: Generate HTML leaderboard
-      if: success()
+      if: success() && steps.find_submissions.outputs.files != ''
       run: |
         python scripts/generate_leaderboard.py
     
     - name: Comment PR with results
-      if: github.event_name == 'pull_request'
+      if: github.event_name == 'pull_request' && steps.find_submissions.outputs.files != ''
       uses: actions/github-script@v6
       with:
         script: |
           const fs = require('fs');
           const path = require('path');
           
+          // Find existing bot comment to update it instead of creating new ones
+          const comments = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          });
+          
+          const botComment = comments.data.find(comment => 
+            comment.user.type === 'Bot' && 
+            comment.body.includes('📊 Submission Evaluation Results')
+          );
+          
           let comment = "## 📊 Submission Evaluation Results\n\n";
+          comment += `*Last updated: ${new Date().toISOString()}*\n\n`;
           
           const resultsDir = 'results';
           if (fs.existsSync(resultsDir)) {
@@ -153,15 +187,26 @@ jobs:
           comment += "The leaderboard will be updated if your submission is valid.\n";
           comment += "👉 [View Leaderboard](https://samuelmatia.github.io/gnn-role-transition-challenge/leaderboard.html)";
           
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: comment
-          });
+          if (botComment) {
+            // Update existing comment
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: botComment.id,
+              body: comment
+            });
+          } else {
+            // Create new comment
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+          }
     
     - name: Commit and push leaderboard to main (immediate update like competitions)
-      if: success()
+      if: success() && steps.find_submissions.outputs.files != ''
       env:
         # Use PAT token if available (for direct push to main from PRs, like real competitions)
         # Otherwise use default GITHUB_TOKEN (works for pushes to main)
@@ -218,7 +263,7 @@ jobs:
         fi
     
     - name: Upload leaderboard artifacts (for PR)
-      if: success() && github.event_name == 'pull_request'
+      if: success() && github.event_name == 'pull_request' && steps.find_submissions.outputs.files != ''
       uses: actions/upload-artifact@v4
       with:
         name: leaderboard-update
