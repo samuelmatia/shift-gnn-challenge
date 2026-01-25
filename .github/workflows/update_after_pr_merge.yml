@@ -3,10 +3,11 @@ name: Update Leaderboard After PR Merge
 on:
   pull_request:
     types: [closed]
+  workflow_dispatch:
 
 jobs:
   update-leaderboard:
-    if: github.event.pull_request.merged == true
+    if: github.event.pull_request.merged == true || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -48,7 +49,11 @@ jobs:
         
         # Find CSV files that were in the merged PR
         echo "Finding submission files from merged PR..."
-        PR_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.merge_commit_sha }} | grep -E '^submissions/.*\.csv$' || echo "")
+        echo "Base SHA: ${{ github.event.pull_request.base.sha }}"
+        echo "Merge SHA: ${{ github.event.pull_request.merge_commit_sha }}"
+        
+        # Try to find files in the PR diff
+        PR_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.merge_commit_sha }} 2>/dev/null | grep -E '^submissions/.*\.csv$' || echo "")
         
         if [ -z "$PR_FILES" ]; then
           # If no specific files found in diff, evaluate all CSV files in submissions/
@@ -58,6 +63,7 @@ jobs:
         
         if [ -z "$PR_FILES" ] || [ "$PR_FILES" = " " ]; then
           echo "⚠️  No submission files found to evaluate"
+          echo "This might trigger update_leaderboard.yml workflow instead"
           exit 0
         fi
         
@@ -107,7 +113,7 @@ jobs:
         if git diff --staged --quiet; then
           echo "ℹ️  No changes to commit in leaderboard"
         else
-          git commit -m "Auto-update leaderboard after PR merge [skip ci]" || {
+          git commit -m "Auto-update leaderboard after PR merge" || {
             echo "❌ Commit failed"
             exit 1
           }

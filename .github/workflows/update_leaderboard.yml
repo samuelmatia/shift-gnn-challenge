@@ -11,7 +11,6 @@ on:
 jobs:
   update-leaderboard:
     runs-on: ubuntu-latest
-    if: github.repository_owner != 'github-actions[bot]'
     
     steps:
     - name: Checkout repository
@@ -64,6 +63,21 @@ jobs:
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         git add leaderboard.json leaderboard.html
-        git diff --staged --quiet || git commit -m "Auto-update leaderboard [skip ci]"
-        git push || echo "Nothing to push"
+        
+        if git diff --staged --quiet; then
+          echo "ℹ️  No changes to commit in leaderboard"
+        else
+          git commit -m "Auto-update leaderboard" || {
+            echo "❌ Commit failed"
+            exit 1
+          }
+          
+          git push origin main || {
+            echo "❌ Push failed"
+            exit 1
+          }
+          
+          echo "✅ Leaderboard successfully updated on main branch"
+          echo "🚀 GitHub Pages will deploy automatically"
+        fi
 

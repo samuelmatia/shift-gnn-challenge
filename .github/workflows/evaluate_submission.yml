@@ -160,12 +160,8 @@ jobs:
             body: comment
           });
     
-    - name: Commit and push leaderboard to main (immediate update like competitions)
-      if: success()
-      env:
-        # Use PAT token if available (for direct push to main from PRs, like real competitions)
-        PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Update leaderboard in PR branch
+      if: success() && github.event_name == 'pull_request'
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
@@ -176,60 +172,120 @@ jobs:
           exit 1
         fi
         
-        # For PRs: Update main branch directly (like real competitions)
-        if [ "${{ github.event_name }}" == "pull_request" ]; then
-          # Check if PAT_TOKEN is available (required for pushing to main from PR)
-          if [ -z "$PAT_TOKEN" ]; then
-            echo "⚠️  PAT_TOKEN not configured. Cannot push to main from PR."
-            echo "📦 Leaderboard files are saved in artifacts."
-            echo "✅ Leaderboard will be updated automatically when PR is merged via update_leaderboard workflow."
-            exit 0
-          fi
-          
-          # Save leaderboard files to temporary location
-          cp leaderboard.json /tmp/leaderboard.json.bak
-          cp leaderboard.html /tmp/leaderboard.html.bak
-          
-          # Configure git to use PAT_TOKEN for authentication
-          git remote set-url origin https://x-access-token:${PAT_TOKEN}@github.com/${{ github.repository }}.git
-          
-          # Stash any local changes to allow checkout
-          git stash push -m "Stash leaderboard before checkout" || true
-          
-          # Fetch and checkout main
-          echo "Fetching main branch..."
-          git fetch origin main:main || {
-            echo "❌ Failed to fetch main branch"
-            git stash pop || true
+        # Add leaderboard files to current PR branch
+        git add leaderboard.json leaderboard.html
+        
+        # Commit and push to PR branch
+        if git diff --staged --quiet; then
+          echo "ℹ️  No changes to commit in leaderboard"
+        else
+          echo "Committing leaderboard changes to PR branch..."
+          git commit -m "Auto-update leaderboard from evaluation [skip ci]" || {
+            echo "❌ Commit failed"
             exit 1
           }
           
-          echo "Checking out main branch..."
-          git checkout main || {
-            echo "❌ Failed to checkout main branch"
-            git stash pop || true
+          echo "Pushing to PR branch..."
+          git push origin HEAD:${{ github.event.pull_request.head.ref }} || {
+            echo "❌ Push failed"
             exit 1
           }
           
-          # Restore leaderboard files from backup
-          cp /tmp/leaderboard.json.bak leaderboard.json
-          cp /tmp/leaderboard.html.bak leaderboard.html
-          
-          echo "✅ Successfully checked out main branch"
+          echo "✅ Leaderboard updated in PR branch"
+          echo "📊 You can view the leaderboard in this PR branch"
         fi
+    
+    - name: Commit and push leaderboard to main (if PAT_TOKEN available)
+      if: success() && github.event_name == 'pull_request'
+      env:
+        # Use PAT token if available (for direct push to main from PRs, like real competitions)
+        PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # Only try to push to main if PAT_TOKEN is configured
+        if [ -z "$PAT_TOKEN" ]; then
+          echo "ℹ️  PAT_TOKEN not configured. Leaderboard updated in PR branch only."
+          echo "✅ Leaderboard will be updated on main automatically when PR is merged."
+          exit 0
+        fi
+        
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        
+        # Verify leaderboard files exist
+        if [ ! -f "leaderboard.json" ] || [ ! -f "leaderboard.html" ]; then
+          echo "ERROR: Leaderboard files not found!"
+          exit 1
+        fi
+        
+        # Save leaderboard files to temporary location
+        cp leaderboard.json /tmp/leaderboard.json.bak
+        cp leaderboard.html /tmp/leaderboard.html.bak
+        
+        # Configure git to use PAT_TOKEN for authentication
+        git remote set-url origin https://x-access-token:${PAT_TOKEN}@github.com/${{ github.repository }}.git
+        
+        # Stash any local changes to allow checkout
+        git stash push -m "Stash leaderboard before checkout" || true
+        
+        # Fetch and checkout main
+        echo "Fetching main branch..."
+        git fetch origin main:main || {
+          echo "❌ Failed to fetch main branch"
+          git stash pop || true
+          exit 1
+        }
+        
+        echo "Checking out main branch..."
+        git checkout main || {
+          echo "❌ Failed to checkout main branch"
+          git stash pop || true
+          exit 1
+        }
+        
+        # Restore leaderboard files from backup
+        cp /tmp/leaderboard.json.bak leaderboard.json
+        cp /tmp/leaderboard.html.bak leaderboard.html
+        
+        echo "✅ Successfully checked out main branch"
         
         # Add leaderboard files
         git add leaderboard.json leaderboard.html
         
-        # Also ensure any submission files that exist but aren't tracked are added
-        if [ -d "submissions" ]; then
-          for file in submissions/*.csv; do
-            if [ -f "$file" ] && ! git ls-files --error-unmatch "$file" >/dev/null 2>&1; then
-              echo "Adding untracked submission file: $file"
-              git add "$file"
-            fi
-          done
+        # Commit and push to main
+        if git diff --staged --quiet; then
+          echo "ℹ️  No changes to commit in leaderboard on main"
+        else
+          echo "Committing leaderboard changes to main..."
+          git commit -m "Auto-update leaderboard [skip ci]" || {
+            echo "❌ Commit failed"
+            exit 1
+          }
+          
+          echo "Pushing to main branch..."
+          git push origin main || {
+            echo "❌ Push failed"
+            exit 1
+          }
+          
+          echo "✅ Leaderboard successfully pushed to main branch"
+          echo "🚀 GitHub Pages will deploy automatically"
         fi
+    
+    - name: Commit and push leaderboard (for push to main)
+      if: success() && github.event_name != 'pull_request'
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        
+        # Verify leaderboard files exist
+        if [ ! -f "leaderboard.json" ] || [ ! -f "leaderboard.html" ]; then
+          echo "ERROR: Leaderboard files not found!"
+          exit 1
+        fi
+        
+        # Add leaderboard files
+        git add leaderboard.json leaderboard.html
         
         # Commit and push
         if git diff --staged --quiet; then
@@ -242,17 +298,10 @@ jobs:
           }
           
           echo "Pushing to main branch..."
-          if [ "${{ github.event_name }}" == "pull_request" ]; then
-            git push origin main || {
-              echo "❌ Push failed"
-              exit 1
-            }
-          else
-            git push || {
-              echo "❌ Push failed"
-              exit 1
-            }
-          fi
+          git push origin main || {
+            echo "❌ Push failed"
+            exit 1
+          }
           
           echo "✅ Leaderboard successfully pushed to main branch"
           echo "🚀 GitHub Pages will deploy automatically"
