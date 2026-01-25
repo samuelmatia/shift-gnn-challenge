@@ -44,8 +44,16 @@ def generate_leaderboard():
     results = load_evaluation_results()
     existing = load_existing_leaderboard()
     
-    # Create a map of existing submissions
-    existing_map = {sub['team']: sub for sub in existing.get('submissions', [])}
+    # Get list of teams that have CSV files (from evaluation results)
+    current_teams = {result['team'] for result in results}
+    
+    # Create a map of existing submissions, but only keep those that still have CSV files
+    existing_map = {}
+    for sub in existing.get('submissions', []):
+        team = sub['team']
+        # Only keep if team still has a CSV file
+        if team in current_teams:
+            existing_map[team] = sub
     
     # Process new results
     for result in results:

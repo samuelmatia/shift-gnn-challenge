@@ -8,16 +8,20 @@ on:
       - 'submissions/**/*.csv'
   workflow_dispatch:
 
+concurrency:
+  group: update-leaderboard
+  cancel-in-progress: false
+
 jobs:
   update-leaderboard:
     runs-on: ubuntu-latest
-    if: github.repository_owner != 'github-actions[bot]'
+    permissions:
+      contents: write
     
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
-        token: ${{ secrets.GITHUB_TOKEN }}
         fetch-depth: 0
     
     - name: Set up Python
@@ -43,12 +47,12 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       run: |
         mkdir -p data/private
-        python scripts/download_private_data.py
+        python scripts/download_private_data.py || echo "Warning: Could not download private data. Continuing anyway."
     
-    - name: Find and evaluate new submissions
-      id: evaluate
+    - name: Evaluate all submissions
       run: |
         mkdir -p results
+        echo "📊 Evaluating all CSV files in submissions/..."
         python scripts/evaluate_all_submissions.py || echo "Evaluation completed with warnings"
         
     - name: Generate leaderboard
@@ -57,13 +61,47 @@ jobs:
         if [ ! -f leaderboard.json ]; then
           echo '{"last_updated": null, "submissions": []}' > leaderboard.json
         fi
+        echo "📈 Generating leaderboard..."
         python scripts/generate_leaderboard.py
     
     - name: Commit and push leaderboard
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
+        
+        # Fetch latest changes before committing
+        git fetch origin main
+        
+        # Check if there are changes to commit
         git add leaderboard.json leaderboard.html
-        git diff --staged --quiet || git commit -m "Auto-update leaderboard [skip ci]"
-        git push || echo "Nothing to push"
-
+        
+        if git diff --staged --quiet; then
+          echo "ℹ️  No changes to commit in leaderboard"
+        else
+          # Pull latest changes and rebase if needed
+          git pull --rebase origin main || {
+            echo "⚠️  Pull/rebase failed, trying to continue"
+          }
+          
+          git commit -m "Auto-update leaderboard [skip ci]" || {
+            echo "❌ Commit failed"
+            exit 1
+          }
+          
+          # Push with retry logic
+          for i in 1 2 3; do
+            if git push origin main; then
+              echo "✅ Leaderboard successfully updated on main branch"
+              echo "🚀 GitHub Pages will deploy automatically"
+              exit 0
+            else
+              echo "⚠️  Push attempt $i failed, fetching and retrying..."
+              git fetch origin main
+              git pull --rebase origin main || true
+              sleep 2
+            fi
+          done
+          
+          echo "❌ Push failed after 3 retries"
+          exit 1
+        fi
