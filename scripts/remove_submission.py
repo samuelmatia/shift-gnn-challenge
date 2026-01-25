@@ -65,8 +65,8 @@ def remove_submission(team_name, delete_file=False):
     # Regenerate HTML leaderboard
     try:
         import sys
-        from pathlib import Path
-        sys.path.insert(0, str(Path(__file__).parent))
+        script_dir = Path(__file__).parent
+        sys.path.insert(0, str(script_dir))
         from generate_leaderboard import generate_html
         generate_html(leaderboard)
         print("✅ Regenerated leaderboard.html")
