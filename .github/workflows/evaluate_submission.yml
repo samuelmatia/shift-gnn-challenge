@@ -31,6 +31,8 @@ jobs:
         git fetch origin ${{ github.base_ref }}:${{ github.base_ref }} || true
         # Also fetch the base ref as a remote tracking branch
         git fetch origin ${{ github.base_ref }} || true
+        # Fetch main to get latest leaderboard
+        git fetch origin main:main || true
     
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -113,14 +115,29 @@ jobs:
           cat results/scores.txt
         fi
     
+    - name: Load latest leaderboard from main
+      if: success() && github.event_name == 'pull_request'
+      run: |
+        # Copy latest leaderboard.json from main branch to ensure we have all existing submissions
+        if git show main:leaderboard.json > leaderboard.json 2>/dev/null; then
+          echo "Loaded latest leaderboard from main branch"
+        else
+          echo "No leaderboard.json in main, starting fresh"
+          echo '{"last_updated": null, "submissions": []}' > leaderboard.json
+        fi
+    
     - name: Update leaderboard
       if: success()
       run: |
         # Ensure results directory exists
         mkdir -p results
-        # Create empty scores.txt if it doesn't exist
-        touch results/scores.txt
-        python scripts/update_leaderboard_from_scores.py
+        # Only update leaderboard if scores.txt exists and has content
+        if [ -f results/scores.txt ] && [ -s results/scores.txt ]; then
+          python scripts/update_leaderboard_from_scores.py
+        else
+          echo "No scores found in results/scores.txt, skipping leaderboard update"
+          echo "This may happen if evaluation failed or no valid submissions were found"
+        fi
     
     - name: Generate HTML leaderboard
       if: success()

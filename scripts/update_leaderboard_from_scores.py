@@ -20,6 +20,11 @@ if not scores_file.exists():
     print("No scores file found")
     sys.exit(1)
 
+# Check if file is empty
+if scores_file.stat().st_size == 0:
+    print("Scores file is empty")
+    sys.exit(1)
+
 existing_map = {sub['team']: sub for sub in leaderboard.get('submissions', [])}
 
 with open(scores_file, 'r') as f:
