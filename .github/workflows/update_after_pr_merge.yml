@@ -1,15 +1,13 @@
-name: Update Leaderboard
+name: Update Leaderboard After PR Merge
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'submissions/**/*.csv'
+  pull_request:
+    types: [closed]
   workflow_dispatch:
 
 jobs:
   update-leaderboard:
+    if: github.event.pull_request.merged == true || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -43,7 +41,7 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       run: |
         mkdir -p data/private
-        python scripts/download_private_data.py
+        python scripts/download_private_data.py || echo "Warning: Could not download private data"
     
     - name: Evaluate all submissions
       run: |
@@ -61,12 +59,13 @@ jobs:
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
+        
         git add leaderboard.json leaderboard.html
         
         if git diff --staged --quiet; then
           echo "ℹ️  No changes to commit in leaderboard"
         else
-          git commit -m "Auto-update leaderboard" || {
+          git commit -m "Auto-update leaderboard after PR merge" || {
             echo "❌ Commit failed"
             exit 1
           }

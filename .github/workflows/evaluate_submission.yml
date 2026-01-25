@@ -2,8 +2,7 @@ name: Evaluate Submission
 
 on:
   pull_request:
-    paths:
-      - 'submissions/**/*.csv'
+    types: [opened, synchronize, reopened]
   push:
     branches:
       - main
@@ -29,7 +28,6 @@ jobs:
       if: github.event_name == 'pull_request'
       run: |
         git fetch origin ${{ github.base_ref }}:${{ github.base_ref }} || true
-        # Also fetch the base ref as a remote tracking branch
         git fetch origin ${{ github.base_ref }} || true
     
     - name: Set up Python
@@ -61,48 +59,62 @@ jobs:
       id: find_submissions
       run: |
         if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-          # Manual trigger - find all CSV files in submissions/
-          FILES=$(find submissions -name "*.csv" -not -name "sample*" | tr '\n' ' ')
+          # Manual trigger - find all CSV files
+          FILES=$(find submissions -name "*.csv" -not -name "sample*" 2>/dev/null | tr '\n' ' ' || echo "")
         elif [ "${{ github.event_name }}" == "pull_request" ]; then
-          # PR - find changed CSV files
-          # Try both origin/base_ref and local base_ref (after fetch)
-          FILES=$(git diff --name-only ${{ github.base_ref }}...HEAD 2>/dev/null | grep -E '^submissions/.*\.csv$' | tr '\n' ' ' || \
-                  git diff --name-only origin/${{ github.base_ref }}...HEAD 2>/dev/null | grep -E '^submissions/.*\.csv$' | tr '\n' ' ' || echo "")
+          # PR - find ALL CSV files in the PR branch
+          echo "🔍 Looking for CSV files in PR branch..."
+          
+          # Find all CSV files in current branch
+          FILES=$(find submissions -name "*.csv" -not -name "sample*" 2>/dev/null | tr '\n' ' ' || echo "")
+          
+          # Also check git-tracked files
+          if [ -z "$FILES" ] || [ "$FILES" = " " ]; then
+            FILES=$(git ls-files submissions/*.csv 2>/dev/null | grep -v sample | tr '\n' ' ' || echo "")
+          fi
+          
+          # Also include files changed in this PR
+          CHANGED=$(git diff --name-only ${{ github.base_ref }}...HEAD 2>/dev/null | grep -E '^submissions/.*\.csv$' | tr '\n' ' ' || echo "")
+          
+          # Combine and deduplicate
+          if [ -n "$CHANGED" ] && [ "$CHANGED" != " " ]; then
+            ALL_FILES="$FILES $CHANGED"
+            FILES=$(echo "$ALL_FILES" | tr ' ' '\n' | sort -u | tr '\n' ' ')
+          fi
         else
-          # Push to main - find all CSV files (not samples) that are tracked in git
-          # Also check for files that exist but might not be tracked yet
-          FILES=$(git ls-files submissions/*.csv | grep -v sample | tr '\n' ' ')
-          # If no tracked files, try finding all CSV files
+          # Push to main - find all CSV files
+          FILES=$(git ls-files submissions/*.csv | grep -v sample | tr '\n' ' ' || echo "")
           if [ -z "$FILES" ]; then
             FILES=$(find submissions -name "*.csv" -not -name "sample*" 2>/dev/null | tr '\n' ' ' || echo "")
           fi
         fi
         
-        if [ -z "$FILES" ]; then
-          echo "No submission files found"
-          echo "Available files in submissions/:"
-          ls -la submissions/ || echo "submissions/ directory not found"
-          echo "Git tracked files:"
-          git ls-files submissions/ || echo "No tracked files"
-          exit 1
-        fi
+        # Clean up
+        FILES=$(echo "$FILES" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | tr -s ' ')
         
-        echo "files=$FILES" >> $GITHUB_OUTPUT
-        echo "Found submission files: $FILES"
+        if [ -z "$FILES" ] || [ "$FILES" = " " ]; then
+          echo "⚠️  No submission files found"
+          ls -la submissions/ 2>/dev/null || echo "submissions/ directory not found"
+          echo "files=" >> $GITHUB_OUTPUT
+        else
+          echo "files=$FILES" >> $GITHUB_OUTPUT
+          echo "✅ Found submission files: $FILES"
+        fi
     
     - name: Evaluate submissions
       id: evaluate
+      if: steps.find_submissions.outputs.files != ''
       run: |
         mkdir -p results
         
         for FILE in ${{ steps.find_submissions.outputs.files }}; do
           if [ ! -f "$FILE" ]; then
-            echo "File not found: $FILE"
+            echo "⚠️  File not found: $FILE"
             continue
           fi
           
           TEAM_NAME=$(basename "$FILE" .csv)
-          echo "Evaluating $FILE (team: $TEAM_NAME)..."
+          echo "📊 Evaluating $FILE (team: $TEAM_NAME)..."
           
           python scoring_script.py "$FILE" --json > "results/${TEAM_NAME}_output.txt" 2>&1 || true
           
@@ -110,32 +122,73 @@ jobs:
         done
         
         if [ -f results/scores.txt ]; then
+          echo "📈 Evaluation results:"
           cat results/scores.txt
         fi
     
     - name: Update leaderboard
-      if: success()
+      if: success() && steps.find_submissions.outputs.files != ''
       run: |
-        # Ensure results directory exists
         mkdir -p results
-        # Create empty scores.txt if it doesn't exist
         touch results/scores.txt
         python scripts/update_leaderboard_from_scores.py
     
     - name: Generate HTML leaderboard
-      if: success()
+      if: success() && steps.find_submissions.outputs.files != ''
       run: |
         python scripts/generate_leaderboard.py
     
+    - name: Update leaderboard in PR branch
+      if: success() && github.event_name == 'pull_request' && steps.find_submissions.outputs.files != ''
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        
+        if [ ! -f "leaderboard.json" ] || [ ! -f "leaderboard.html" ]; then
+          echo "❌ ERROR: Leaderboard files not found!"
+          exit 1
+        fi
+        
+        git add leaderboard.json leaderboard.html
+        
+        if git diff --staged --quiet; then
+          echo "ℹ️  No changes to commit in leaderboard"
+        else
+          git commit -m "Auto-update leaderboard from evaluation [skip ci]" || {
+            echo "❌ Commit failed"
+            exit 1
+          }
+          
+          git push origin HEAD:${{ github.event.pull_request.head.ref }} || {
+            echo "❌ Push to PR branch failed"
+            exit 1
+          }
+          
+          echo "✅ Leaderboard updated in PR branch"
+        fi
+    
     - name: Comment PR with results
-      if: github.event_name == 'pull_request'
+      if: github.event_name == 'pull_request' && steps.find_submissions.outputs.files != ''
       uses: actions/github-script@v6
       with:
         script: |
           const fs = require('fs');
           const path = require('path');
           
+          // Find existing bot comment
+          const comments = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          });
+          
+          const botComment = comments.data.find(comment => 
+            comment.user.type === 'Bot' && 
+            comment.body.includes('📊 Submission Evaluation Results')
+          );
+          
           let comment = "## 📊 Submission Evaluation Results\n\n";
+          comment += `*Last updated: ${new Date().toISOString()}*\n\n`;
           
           const resultsDir = 'results';
           if (fs.existsSync(resultsDir)) {
@@ -150,75 +203,116 @@ jobs:
             }
           }
           
-          comment += "The leaderboard will be updated if your submission is valid.\n";
+          comment += "The leaderboard has been updated in this PR branch.\n";
           comment += "👉 [View Leaderboard](https://samuelmatia.github.io/gnn-role-transition-challenge/leaderboard.html)";
           
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: comment
-          });
+          if (botComment) {
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: botComment.id,
+              body: comment
+            });
+          } else {
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+          }
     
-    - name: Commit and push leaderboard to main (immediate update like competitions)
-      if: success()
+    - name: Push leaderboard to main (if PAT_TOKEN available)
+      if: success() && github.event_name == 'pull_request' && steps.find_submissions.outputs.files != ''
       env:
-        # Use PAT token if available (for direct push to main from PRs, like real competitions)
-        # Otherwise use default GITHUB_TOKEN (works for pushes to main)
-        GITHUB_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+        PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
+      run: |
+        if [ -z "$PAT_TOKEN" ]; then
+          echo "ℹ️  PAT_TOKEN not configured. Leaderboard updated in PR branch only."
+          echo "✅ Leaderboard will be updated on main automatically when PR is merged."
+          exit 0
+        fi
+        
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        
+        if [ ! -f "leaderboard.json" ] || [ ! -f "leaderboard.html" ]; then
+          echo "❌ ERROR: Leaderboard files not found!"
+          exit 1
+        fi
+        
+        # Save files
+        cp leaderboard.json /tmp/leaderboard.json.bak
+        cp leaderboard.html /tmp/leaderboard.html.bak
+        
+        # Configure remote with PAT
+        git remote set-url origin https://x-access-token:${PAT_TOKEN}@github.com/${{ github.repository }}.git
+        
+        # Stash and checkout main
+        git stash push -m "Stash before checkout" || true
+        
+        git fetch origin main:main || {
+          echo "❌ Failed to fetch main"
+          git stash pop || true
+          exit 1
+        }
+        
+        git checkout main || {
+          echo "❌ Failed to checkout main"
+          git stash pop || true
+          exit 1
+        }
+        
+        # Restore files
+        cp /tmp/leaderboard.json.bak leaderboard.json
+        cp /tmp/leaderboard.html.bak leaderboard.html
+        
+        git add leaderboard.json leaderboard.html
+        
+        if git diff --staged --quiet; then
+          echo "ℹ️  No changes to commit on main"
+        else
+          git commit -m "Auto-update leaderboard [skip ci]" || {
+            echo "❌ Commit failed"
+            exit 1
+          }
+          
+          git push origin main || {
+            echo "❌ Push failed"
+            exit 1
+          }
+          
+          echo "✅ Leaderboard pushed to main branch"
+          echo "🚀 GitHub Pages will deploy automatically"
+        fi
+    
+    - name: Commit and push leaderboard (for push to main)
+      if: success() && github.event_name != 'pull_request' && steps.find_submissions.outputs.files != ''
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         
-        # Verify leaderboard files exist
-        if [ ! -f "leaderboard.json" ] || [ ! -f "leaderboard.html" ]; then
-          echo "ERROR: Leaderboard files not found!"
-          exit 1
-        fi
-        
-        # For PRs: Update main branch directly (like real competitions)
-        # This works if PAT_TOKEN is configured, otherwise leaderboard is in artifacts
-        if [ "${{ github.event_name }}" == "pull_request" ]; then
-          # Save leaderboard files
-          cp leaderboard.json leaderboard.json.bak
-          cp leaderboard.html leaderboard.html.bak
-          
-          # Fetch and checkout main
-          git fetch origin main:main || true
-          git checkout main 2>/dev/null || {
-            echo "Note: Cannot checkout main from PR without PAT_TOKEN."
-            echo "Leaderboard is available in artifacts and will be in main after merge."
-            exit 0
-          }
-          
-          # Restore leaderboard files
-          mv leaderboard.json.bak leaderboard.json
-          mv leaderboard.html.bak leaderboard.html
-        fi
-        
-        # Add leaderboard files
         git add leaderboard.json leaderboard.html
         
-        # Also ensure any submission files that exist but aren't tracked are added
-        if [ -d "submissions" ]; then
-          for file in submissions/*.csv; do
-            if [ -f "$file" ] && ! git ls-files --error-unmatch "$file" >/dev/null 2>&1; then
-              echo "Adding untracked submission file: $file"
-              git add "$file"
-            fi
-          done
-        fi
-        
-        # Commit and push
         if git diff --staged --quiet; then
-          echo "No changes to commit in leaderboard"
+          echo "ℹ️  No changes to commit"
         else
-          git commit -m "Auto-update leaderboard [skip ci]" || echo "Commit failed"
-          git push origin main || echo "Note: Push may require PAT_TOKEN for PRs. Leaderboard available in artifacts."
+          git commit -m "Auto-update leaderboard [skip ci]" || {
+            echo "❌ Commit failed"
+            exit 1
+          }
+          
+          git push origin main || {
+            echo "❌ Push failed"
+            exit 1
+          }
+          
+          echo "✅ Leaderboard updated on main"
+          echo "🚀 GitHub Pages will deploy automatically"
         fi
     
-    - name: Upload leaderboard artifacts (for PR)
-      if: success() && github.event_name == 'pull_request'
+    - name: Upload leaderboard artifacts
+      if: success() && github.event_name == 'pull_request' && steps.find_submissions.outputs.files != ''
       uses: actions/upload-artifact@v4
       with:
         name: leaderboard-update

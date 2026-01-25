@@ -1,0 +1,114 @@
+name: Remove Team from Leaderboard
+
+on:
+  workflow_dispatch:
+    inputs:
+      team_name:
+        description: 'Team name to remove from leaderboard'
+        required: true
+        type: string
+  issues:
+    types: [opened]
+    labels: ['remove-team']
+
+jobs:
+  remove-team:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Get team name from issue or input
+      id: get_team
+      run: |
+        if [ "${{ github.event_name }}" == "issues" ]; then
+          # Extract team name from issue title or body
+          ISSUE_TITLE="${{ github.event.issue.title }}"
+          ISSUE_BODY="${{ github.event.issue.body }}"
+          
+          # Try to extract team name from issue title (format: "Remove team: team_name")
+          TEAM_NAME=$(echo "$ISSUE_TITLE" | grep -oP '(?i)(?:remove|delete).*?team[:\s]+(\S+)' | sed 's/.*:\s*//' | head -1)
+          
+          # If not found, try from body
+          if [ -z "$TEAM_NAME" ]; then
+            TEAM_NAME=$(echo "$ISSUE_BODY" | grep -oP '(?:team[:\s]+|@)(\S+)' | head -1 | sed 's/@//')
+          fi
+          
+          if [ -z "$TEAM_NAME" ]; then
+            echo "❌ Could not extract team name from issue"
+            echo "Please format your issue as: 'Remove team: team_name' or mention the team name in the body"
+            exit 1
+          fi
+        else
+          # From workflow_dispatch input
+          TEAM_NAME="${{ github.event.inputs.team_name }}"
+        fi
+        
+        echo "team_name=$TEAM_NAME" >> $GITHUB_OUTPUT
+        echo "🎯 Team to remove: $TEAM_NAME"
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Remove team from leaderboard
+      run: |
+        python remove_team.py "${{ steps.get_team.outputs.team_name }}"
+    
+    - name: Commit and push changes
+      if: success()
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        
+        git add leaderboard.json leaderboard.html
+        
+        if git diff --staged --quiet; then
+          echo "ℹ️  No changes to commit"
+        else
+          git commit -m "Remove team ${{ steps.get_team.outputs.team_name }} from leaderboard" || {
+            echo "❌ Commit failed"
+            exit 1
+          }
+          
+          git push origin main || {
+            echo "❌ Push failed"
+            exit 1
+          }
+          
+          echo "✅ Team removed and changes pushed to main"
+          echo "🚀 GitHub Pages will deploy automatically"
+        fi
+    
+    - name: Comment on issue
+      if: github.event_name == 'issues' && success()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const teamName = '${{ steps.get_team.outputs.team_name }}';
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: `✅ Team **${teamName}** has been removed from the leaderboard.\n\nThe leaderboard has been updated on the main branch.`
+          });
+    
+    - name: Close issue
+      if: github.event_name == 'issues' && success()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          github.rest.issues.update({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            state: 'closed'
+          });
+
