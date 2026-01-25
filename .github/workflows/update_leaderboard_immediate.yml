@@ -1,0 +1,81 @@
+name: Update Leaderboard Immediately (Like Competitions)
+
+on:
+  workflow_run:
+    workflows: ["Evaluate Submission"]
+    types:
+      - completed
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  update-leaderboard-immediate:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    permissions:
+      contents: write
+      actions: read
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Download leaderboard artifacts from workflow
+      if: github.event_name == 'workflow_run'
+      uses: actions/download-artifact@v4
+      with:
+        name: leaderboard-update
+        path: ./
+        run-id: ${{ github.event.workflow_run.id }}
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install dependencies
+      run: |
+        pip install pandas pyarrow scikit-learn
+    
+    - name: Download private test data
+      env:
+        PRIVATE_DATA_METHOD: ${{ secrets.PRIVATE_DATA_METHOD || 'url' }}
+        PRIVATE_DATA_URL: ${{ secrets.PRIVATE_DATA_URL }}
+        PRIVATE_DATA_TOKEN: ${{ secrets.PRIVATE_DATA_TOKEN }}
+      run: |
+        mkdir -p data/private
+        python scripts/download_private_data.py || echo "Warning: Could not download private data"
+    
+    - name: Re-evaluate and update leaderboard
+      run: |
+        # If artifacts not available, re-evaluate all submissions
+        if [ ! -f "leaderboard.json" ]; then
+          mkdir -p results
+          python scripts/evaluate_all_submissions.py || echo "Evaluation completed with warnings"
+          python scripts/generate_leaderboard.py
+        fi
+    
+    - name: Commit and push leaderboard to main (immediate update)
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        
+        if [ ! -f "leaderboard.json" ] || [ ! -f "leaderboard.html" ]; then
+          echo "ERROR: Leaderboard files not found!"
+          exit 1
+        fi
+        
+        git add leaderboard.json leaderboard.html
+        
+        if git diff --staged --quiet; then
+          echo "No changes to commit"
+        else
+          git commit -m "Auto-update leaderboard [skip ci]"
+          git push origin main
+        fi
+

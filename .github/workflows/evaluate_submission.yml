@@ -70,7 +70,12 @@ jobs:
                   git diff --name-only origin/${{ github.base_ref }}...HEAD 2>/dev/null | grep -E '^submissions/.*\.csv$' | tr '\n' ' ' || echo "")
         else
           # Push to main - find all CSV files (not samples) that are tracked in git
-          FILES=$(git ls-files submissions/*.csv | grep -v sample | tr '\n' ' ' || echo "")
+          # Also check for files that exist but might not be tracked yet
+          FILES=$(git ls-files submissions/*.csv | grep -v sample | tr '\n' ' ')
+          # If no tracked files, try finding all CSV files
+          if [ -z "$FILES" ]; then
+            FILES=$(find submissions -name "*.csv" -not -name "sample*" 2>/dev/null | tr '\n' ' ' || echo "")
+          fi
         fi
         
         if [ -z "$FILES" ]; then
@@ -111,9 +116,14 @@ jobs:
     - name: Update leaderboard
       if: success()
       run: |
+        # Ensure results directory exists
+        mkdir -p results
+        # Create empty scores.txt if it doesn't exist
+        touch results/scores.txt
         python scripts/update_leaderboard_from_scores.py
     
     - name: Generate HTML leaderboard
+      if: success()
       run: |
         python scripts/generate_leaderboard.py
     
@@ -150,19 +160,47 @@ jobs:
             body: comment
           });
     
-    - name: Commit and push leaderboard
-      if: success() && github.event_name == 'push'
+    - name: Commit and push leaderboard to main (immediate update like competitions)
+      if: success()
+      env:
+        # Use PAT token if available (for direct push to main from PRs, like real competitions)
+        # Otherwise use default GITHUB_TOKEN (works for pushes to main)
+        GITHUB_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
+        
+        # Verify leaderboard files exist
+        if [ ! -f "leaderboard.json" ] || [ ! -f "leaderboard.html" ]; then
+          echo "ERROR: Leaderboard files not found!"
+          exit 1
+        fi
+        
+        # For PRs: Update main branch directly (like real competitions)
+        # This works if PAT_TOKEN is configured, otherwise leaderboard is in artifacts
+        if [ "${{ github.event_name }}" == "pull_request" ]; then
+          # Save leaderboard files
+          cp leaderboard.json leaderboard.json.bak
+          cp leaderboard.html leaderboard.html.bak
+          
+          # Fetch and checkout main
+          git fetch origin main:main || true
+          git checkout main 2>/dev/null || {
+            echo "Note: Cannot checkout main from PR without PAT_TOKEN."
+            echo "Leaderboard is available in artifacts and will be in main after merge."
+            exit 0
+          }
+          
+          # Restore leaderboard files
+          mv leaderboard.json.bak leaderboard.json
+          mv leaderboard.html.bak leaderboard.html
+        fi
         
         # Add leaderboard files
         git add leaderboard.json leaderboard.html
         
         # Also ensure any submission files that exist but aren't tracked are added
-        # This handles the case where files were merged but not yet committed
         if [ -d "submissions" ]; then
-          # Find CSV files in submissions/ that exist but aren't tracked
           for file in submissions/*.csv; do
             if [ -f "$file" ] && ! git ls-files --error-unmatch "$file" >/dev/null 2>&1; then
               echo "Adding untracked submission file: $file"
@@ -171,8 +209,13 @@ jobs:
           done
         fi
         
-        git diff --staged --quiet || git commit -m "Auto-update leaderboard [skip ci]"
-        git push || echo "Nothing to push"
+        # Commit and push
+        if git diff --staged --quiet; then
+          echo "No changes to commit in leaderboard"
+        else
+          git commit -m "Auto-update leaderboard [skip ci]" || echo "Commit failed"
+          git push origin main || echo "Note: Push may require PAT_TOKEN for PRs. Leaderboard available in artifacts."
+        fi
     
     - name: Upload leaderboard artifacts (for PR)
       if: success() && github.event_name == 'pull_request'
