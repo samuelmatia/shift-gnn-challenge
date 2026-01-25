@@ -23,6 +23,7 @@ jobs:
       with:
         fetch-depth: 0
         ref: ${{ github.event.pull_request.head.ref || github.ref }}
+        token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
     
     - name: Fetch base branch (for PR comparison)
       if: github.event_name == 'pull_request'
@@ -222,18 +223,31 @@ jobs:
         fi
         
         # For PRs: Update main branch directly (like real competitions)
-        # This works if PAT_TOKEN is configured, otherwise leaderboard is in artifacts
         if [ "${{ github.event_name }}" == "pull_request" ]; then
+          # Check if PAT_TOKEN is available
+          if [ -z "${{ secrets.PAT_TOKEN }}" ]; then
+            echo "⚠️  PAT_TOKEN not configured. Cannot push to main from PR."
+            echo "Leaderboard will be updated after PR merge via update_after_merge workflow."
+            echo "Leaderboard files are available in artifacts."
+            exit 0
+          fi
+          
           # Save leaderboard files
           cp leaderboard.json leaderboard.json.bak
           cp leaderboard.html leaderboard.html.bak
           
+          # Configure remote with PAT token
+          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git
+          
           # Fetch and checkout main
-          git fetch origin main:main || true
-          git checkout main 2>/dev/null || {
-            echo "Note: Cannot checkout main from PR without PAT_TOKEN."
-            echo "Leaderboard is available in artifacts and will be in main after merge."
-            exit 0
+          git fetch origin main:main || {
+            echo "Failed to fetch main branch"
+            exit 1
+          }
+          
+          git checkout main || {
+            echo "Failed to checkout main branch"
+            exit 1
           }
           
           # Restore leaderboard files
@@ -258,8 +272,17 @@ jobs:
         if git diff --staged --quiet; then
           echo "No changes to commit in leaderboard"
         else
-          git commit -m "Auto-update leaderboard [skip ci]" || echo "Commit failed"
-          git push origin main || echo "Note: Push may require PAT_TOKEN for PRs. Leaderboard available in artifacts."
+          git commit -m "Auto-update leaderboard" || {
+            echo "Commit failed"
+            exit 1
+          }
+          
+          git push origin main || {
+            echo "Push failed - this may require PAT_TOKEN for PRs"
+            exit 1
+          }
+          
+          echo "✅ Leaderboard pushed to main - GitHub Pages will deploy automatically"
         fi
     
     - name: Upload leaderboard artifacts (for PR)
