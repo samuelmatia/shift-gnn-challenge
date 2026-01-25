@@ -58,9 +58,21 @@ jobs:
       with:
         python-version: '3.9'
     
+    - name: Verify remove_team.py exists
+      run: |
+        if [ ! -f "remove_team.py" ]; then
+          echo "❌ ERROR: remove_team.py not found in repository"
+          echo "Current directory: $(pwd)"
+          echo "Files in root:"
+          ls -la | head -20
+          exit 1
+        fi
+        echo "✅ Found remove_team.py"
+        ls -la remove_team.py
+    
     - name: Remove team from leaderboard
       run: |
-        python remove_team.py "${{ steps.get_team.outputs.team_name }}"
+        python3 remove_team.py "${{ steps.get_team.outputs.team_name }}"
     
     - name: Commit and push changes
       if: success()
