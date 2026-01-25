@@ -51,6 +51,8 @@ with open(scores_file, 'r') as f:
                 print(f"Updated entry for {team}: {weighted_f1:.6f}")
 
 # Quick filter: only check files for entries we're keeping
+# Note: In PR context, we keep all entries from main even if files don't exist in PR branch
+# The files will exist in main after merge
 submissions_dir = Path("submissions")
 valid_submissions = []
 
@@ -62,7 +64,11 @@ for entry in existing_map.values():
     if submission_file.exists():
         valid_submissions.append(entry)
     else:
-        print(f"Removing {team} from leaderboard (file not found)")
+        # In PR context, don't remove entries - files exist in main
+        # Only remove if we're sure the file doesn't exist (e.g., after explicit deletion)
+        # For now, keep all entries to preserve leaderboard during PR evaluation
+        valid_submissions.append(entry)
+        print(f"Note: File not found for {team} in current branch, but keeping in leaderboard (may be in main)")
 
 # Sort and save
 valid_submissions.sort(key=lambda x: x['weighted_f1'], reverse=True)

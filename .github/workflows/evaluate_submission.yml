@@ -108,11 +108,23 @@ jobs:
           
           python scoring_script.py "$FILE" --json > "results/${TEAM_NAME}_output.txt" 2>&1 || true
           
-          python scripts/extract_scores.py "$TEAM_NAME" >> results/scores.txt 2>&1 || echo "$TEAM_NAME:0.0:0.0:0.0" >> results/scores.txt
+          # Extract scores (capture both stdout and stderr)
+          SCORE_OUTPUT=$(python scripts/extract_scores.py "$TEAM_NAME" 2>&1)
+          if [ $? -eq 0 ] && [ -n "$SCORE_OUTPUT" ]; then
+            echo "$SCORE_OUTPUT" >> results/scores.txt
+            echo "Added score for $TEAM_NAME: $SCORE_OUTPUT"
+          else
+            echo "$TEAM_NAME:0.0:0.0:0.0" >> results/scores.txt
+            echo "Warning: Failed to extract scores for $TEAM_NAME, using default 0.0:0.0:0.0"
+          fi
         done
         
         if [ -f results/scores.txt ]; then
+          echo "=== Contents of results/scores.txt ==="
           cat results/scores.txt
+          echo "=== End of scores.txt ==="
+        else
+          echo "WARNING: results/scores.txt does not exist!"
         fi
     
     - name: Load latest leaderboard from main
@@ -131,9 +143,23 @@ jobs:
       run: |
         # Ensure results directory exists
         mkdir -p results
+        # Debug: Show what we have
+        echo "=== Debug: Checking scores.txt ==="
+        if [ -f results/scores.txt ]; then
+          echo "scores.txt exists"
+          echo "Size: $(wc -l < results/scores.txt) lines"
+          echo "Content:"
+          cat results/scores.txt || echo "Could not read file"
+        else
+          echo "scores.txt does NOT exist"
+        fi
+        echo "=== End Debug ==="
+        
         # Only update leaderboard if scores.txt exists and has content
         if [ -f results/scores.txt ] && [ -s results/scores.txt ]; then
+          echo "Updating leaderboard..."
           python scripts/update_leaderboard_from_scores.py
+          echo "Leaderboard update completed"
         else
           echo "No scores found in results/scores.txt, skipping leaderboard update"
           echo "This may happen if evaluation failed or no valid submissions were found"
@@ -142,7 +168,17 @@ jobs:
     - name: Generate HTML leaderboard
       if: success()
       run: |
+        echo "=== Generating HTML leaderboard ==="
         python scripts/generate_leaderboard.py
+        echo "=== Checking leaderboard.json ==="
+        if [ -f leaderboard.json ]; then
+          echo "leaderboard.json exists"
+          echo "Number of submissions: $(cat leaderboard.json | grep -c '\"team\"' || echo '0')"
+          echo "Teams in leaderboard:"
+          cat leaderboard.json | grep '"team"' | head -10
+        else
+          echo "ERROR: leaderboard.json does not exist!"
+        fi
     
     - name: Comment PR with results
       if: github.event_name == 'pull_request'
@@ -177,11 +213,10 @@ jobs:
             body: comment
           });
     
-    - name: Commit and push leaderboard to main (immediate update like competitions)
-      if: success()
+    - name: Update leaderboard in main immediately (like competitions)
+      if: success() && github.event_name == 'pull_request'
       env:
-        # Use PAT token if available (for direct push to main from PRs, like real competitions)
-        # Otherwise use default GITHUB_TOKEN (works for pushes to main)
+        # Use PAT token for direct push to main from PR (like real competitions)
         GITHUB_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
       run: |
         git config --local user.email "action@github.com"
@@ -193,24 +228,63 @@ jobs:
           exit 1
         fi
         
-        # For PRs: Update main branch directly (like real competitions)
-        # This works if PAT_TOKEN is configured, otherwise leaderboard is in artifacts
-        if [ "${{ github.event_name }}" == "pull_request" ]; then
-          # Save leaderboard files
-          cp leaderboard.json leaderboard.json.bak
-          cp leaderboard.html leaderboard.html.bak
-          
-          # Fetch and checkout main
-          git fetch origin main:main || true
-          git checkout main 2>/dev/null || {
-            echo "Note: Cannot checkout main from PR without PAT_TOKEN."
-            echo "Leaderboard is available in artifacts and will be in main after merge."
-            exit 0
+        # Save leaderboard files
+        cp leaderboard.json leaderboard.json.bak
+        cp leaderboard.html leaderboard.html.bak
+        
+        # Fetch and checkout main branch
+        echo "Fetching main branch..."
+        git fetch origin main:main || {
+          echo "ERROR: Could not fetch main branch"
+          exit 1
+        }
+        
+        echo "Checking out main branch..."
+        git checkout main || {
+          echo "ERROR: Could not checkout main branch"
+          echo "Note: This requires PAT_TOKEN secret to be configured"
+          echo "Leaderboard is available in artifacts and will be in main after merge"
+          exit 0
+        }
+        
+        # Restore leaderboard files
+        mv leaderboard.json.bak leaderboard.json
+        mv leaderboard.html.bak leaderboard.html
+        
+        # Add leaderboard files
+        git add leaderboard.json leaderboard.html
+        
+        # Commit and push to main
+        if git diff --staged --quiet; then
+          echo "No changes to commit in leaderboard"
+        else
+          echo "Committing leaderboard update to main..."
+          git commit -m "Auto-update leaderboard after PR evaluation [skip ci]" || {
+            echo "ERROR: Commit failed"
+            exit 1
           }
           
-          # Restore leaderboard files
-          mv leaderboard.json.bak leaderboard.json
-          mv leaderboard.html.bak leaderboard.html
+          echo "Pushing to main..."
+          git push origin main || {
+            echo "ERROR: Push to main failed"
+            echo "This usually means PAT_TOKEN is not configured or doesn't have write permissions"
+            echo "Leaderboard is available in artifacts and will be in main after merge"
+            exit 1
+          }
+          
+          echo "✅ Leaderboard successfully updated in main!"
+        fi
+    
+    - name: Commit and push leaderboard to main
+      if: success() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        
+        # Verify leaderboard files exist
+        if [ ! -f "leaderboard.json" ] || [ ! -f "leaderboard.html" ]; then
+          echo "ERROR: Leaderboard files not found!"
+          exit 1
         fi
         
         # Add leaderboard files
@@ -231,7 +305,7 @@ jobs:
           echo "No changes to commit in leaderboard"
         else
           git commit -m "Auto-update leaderboard [skip ci]" || echo "Commit failed"
-          git push origin main || echo "Note: Push may require PAT_TOKEN for PRs. Leaderboard available in artifacts."
+          git push || echo "Push failed"
         fi
     
     - name: Upload leaderboard artifacts (for PR)
