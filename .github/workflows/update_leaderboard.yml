@@ -11,12 +11,13 @@ on:
 jobs:
   update-leaderboard:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
-        token: ${{ secrets.GITHUB_TOKEN }}
         fetch-depth: 0
     
     - name: Set up Python
@@ -44,16 +45,14 @@ jobs:
         mkdir -p data/private
         python scripts/download_private_data.py
     
-    - name: Find and evaluate new submissions
-      id: evaluate
+    - name: Evaluate all submissions
       run: |
         mkdir -p results
         python scripts/evaluate_all_submissions.py || echo "Evaluation completed with warnings"
-        
+    
     - name: Generate leaderboard
       run: |
-        # Create initial leaderboard.json if it doesn't exist
-        if [ ! -f leaderboard.json ]; then
+        if [ ! -f "leaderboard.json" ]; then
           echo '{"last_updated": null, "submissions": []}' > leaderboard.json
         fi
         python scripts/generate_leaderboard.py
@@ -80,4 +79,3 @@ jobs:
           echo "✅ Leaderboard successfully updated on main branch"
           echo "🚀 GitHub Pages will deploy automatically"
         fi
-

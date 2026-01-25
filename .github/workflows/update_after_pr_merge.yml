@@ -43,67 +43,19 @@ jobs:
         mkdir -p data/private
         python scripts/download_private_data.py || echo "Warning: Could not download private data"
     
-    - name: Find and evaluate submissions from merged PR
+    - name: Evaluate all submissions
       run: |
         mkdir -p results
-        
-        # Find CSV files that were in the merged PR
-        echo "Finding submission files from merged PR..."
-        echo "Base SHA: ${{ github.event.pull_request.base.sha }}"
-        echo "Merge SHA: ${{ github.event.pull_request.merge_commit_sha }}"
-        
-        # Try to find files in the PR diff
-        PR_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.merge_commit_sha }} 2>/dev/null | grep -E '^submissions/.*\.csv$' || echo "")
-        
-        if [ -z "$PR_FILES" ]; then
-          # If no specific files found in diff, evaluate all CSV files in submissions/
-          echo "No specific files in PR diff, evaluating all submissions..."
-          PR_FILES=$(find submissions -name "*.csv" -not -name "sample*" 2>/dev/null | tr '\n' ' ' || echo "")
-        fi
-        
-        if [ -z "$PR_FILES" ] || [ "$PR_FILES" = " " ]; then
-          echo "⚠️  No submission files found to evaluate"
-          echo "This might trigger update_leaderboard.yml workflow instead"
-          exit 0
-        fi
-        
-        echo "Evaluating files: $PR_FILES"
-        
-        for FILE in $PR_FILES; do
-          if [ ! -f "$FILE" ]; then
-            echo "File not found: $FILE"
-            continue
-          fi
-          
-          TEAM_NAME=$(basename "$FILE" .csv)
-          echo "Evaluating $FILE (team: $TEAM_NAME)..."
-          
-          python scoring_script.py "$FILE" --json > "results/${TEAM_NAME}_output.txt" 2>&1 || true
-          
-          python scripts/extract_scores.py "$TEAM_NAME" >> results/scores.txt 2>&1 || echo "$TEAM_NAME:0.0:0.0:0.0" >> results/scores.txt
-        done
-        
-        if [ -f results/scores.txt ]; then
-          echo "Evaluation results:"
-          cat results/scores.txt
-        fi
+        python scripts/evaluate_all_submissions.py || echo "Evaluation completed with warnings"
     
-    - name: Update leaderboard
-      if: success()
+    - name: Generate leaderboard
       run: |
-        # Ensure results directory exists
-        mkdir -p results
-        # Create empty scores.txt if it doesn't exist
-        touch results/scores.txt
-        python scripts/update_leaderboard_from_scores.py
-    
-    - name: Generate HTML leaderboard
-      if: success()
-      run: |
+        if [ ! -f "leaderboard.json" ]; then
+          echo '{"last_updated": null, "submissions": []}' > leaderboard.json
+        fi
         python scripts/generate_leaderboard.py
     
-    - name: Commit and push leaderboard to main
-      if: success()
+    - name: Commit and push leaderboard
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
@@ -126,4 +78,3 @@ jobs:
           echo "✅ Leaderboard successfully updated on main branch"
           echo "🚀 GitHub Pages will deploy automatically"
         fi
-
