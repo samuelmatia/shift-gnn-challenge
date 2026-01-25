@@ -6,9 +6,6 @@ on:
       - main
     paths:
       - 'submissions/**/*.csv'
-    paths-ignore:
-      - 'leaderboard.json'
-      - 'leaderboard.html'
   workflow_dispatch:
 
 concurrency:
@@ -17,10 +14,10 @@ concurrency:
 
 jobs:
   update-leaderboard:
-    # Don't run if the commit message contains [skip ci] or was made by the bot
+    # Don't run if the commit message contains [skip ci] (to prevent loops)
     if: |
-      (github.event.head_commit.message != '' && !contains(github.event.head_commit.message, '[skip ci]')) ||
-      github.event_name == 'workflow_dispatch'
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.head_commit.message != '' && !contains(github.event.head_commit.message, '[skip ci]'))
     runs-on: ubuntu-latest
     permissions:
       contents: write
