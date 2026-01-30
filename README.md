@@ -174,18 +174,19 @@ To ensure fair competition and focus on scalable GNN methods:
    789,6,1 
 ```
 
-**Your submission file should be named: submissions/your_team_name.csv**
-
+**Put your submission in `submissions/` and name it exactly `challenge_submission.csv`.**  
+Do **not** put it in `submissions_examples/` — that folder is for examples only and is **never** evaluated or used for the leaderboard.
 
 5. **Score Your Submission**
 
 ```bash
-python scoring_script.py submissions/your_team_name.csv
+python scoring_script.py submissions/challenge_submission.csv
 ```
 
-6. **Create a Pull Request** with your submission file:
-   - Add your CSV file to `submissions/your_team_name.csv`
-   - A GitHub Action runs on the PR, evaluates your submission, posts your score as a comment, and updates the public leaderboard
+6. **Create a Pull Request** with your submission:
+   - Add **one** file in **`submissions/`** named **`challenge_submission.csv`**.
+   - Your **leaderboard name** is your **GitHub username** (one entry per participant; you can update by pushing new commits).
+   - A GitHub Action runs on the PR, evaluates your submission, posts your score as a comment, and updates the public leaderboard.
 
 
 
@@ -197,7 +198,7 @@ The leaderboard is updated automatically when you open or update a Pull Request 
 
 The leaderboard shows:
 - **Rank**: Your position based on Weighted Macro-F1 score
-- **Team Name**: Your submission filename (without .csv)
+- **Team Name**: GitHub username (for PR submissions) or submission filename (for direct pushes on main)
 - **Weighted Macro-F1**: Primary evaluation metric
 - **Overall Macro-F1**: Overall performance across all transitions
 - **Rare Transitions F1**: Performance on rare transitions (< 5% frequency)

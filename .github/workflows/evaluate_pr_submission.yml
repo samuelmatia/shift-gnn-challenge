@@ -1,10 +1,10 @@
-# Evaluate submission on Pull Request, post score as comment, and update the public leaderboard on main.
+# Evaluates only submissions/ (submissions_examples/ ignored). One CSV per PR; leaderboard name = GitHub login.
 name: Evaluate PR Submission
 
 on:
   pull_request:
     paths:
-      - 'submissions/**/*.csv'
+      - 'submissions/**/*.csv'   # submissions_examples/ changes do not trigger
 
 concurrency:
   group: pr-eval-${{ github.event.pull_request.number }}
@@ -53,6 +53,8 @@ jobs:
 
       - name: Evaluate submissions
         if: env.PR_EVAL_SKIP != '1'
+        env:
+          PR_TEAM_NAME: ${{ github.event.pull_request.user.login }}
         run: |
           python scripts/evaluate_all_submissions.py || true
 
@@ -101,7 +103,7 @@ jobs:
             } else if (fs.existsSync('evaluation_results.json')) {
               const data = JSON.parse(fs.readFileSync('evaluation_results.json', 'utf8'));
               if (data.length === 0) {
-                body += 'No valid submissions could be evaluated (check CSV format: `user_id`, `snapshot_id`, `predicted_role`).\n\n';
+                body += 'No valid submission was evaluated. Make sure your file is named **`submissions/challenge_submission.csv`** and has columns `user_id`, `snapshot_id`, `predicted_role`.\n\n';
               } else {
                 body += '| Team | Weighted Macro-F1 | Overall Macro-F1 | Rare Transitions F1 |\n';
                 body += '|------|-------------------|------------------|---------------------|\n';
