@@ -1,0 +1,97 @@
+# Evaluate submission on Pull Request and post score as comment.
+# External participants get immediate feedback; leaderboard updates when PR is merged (main workflow).
+name: Evaluate PR Submission
+
+on:
+  pull_request:
+    paths:
+      - 'submissions/**/*.csv'
+
+concurrency:
+  group: pr-eval-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          pip install -r starter_code/requirements.txt
+          pip install pandas pyarrow scikit-learn requests gdown boto3
+
+      - name: Download private test data
+        env:
+          PRIVATE_DATA_METHOD: ${{ secrets.PRIVATE_DATA_METHOD || 'url' }}
+          PRIVATE_DATA_URL: ${{ secrets.PRIVATE_DATA_URL }}
+          PRIVATE_DATA_TOKEN: ${{ secrets.PRIVATE_DATA_TOKEN }}
+          GOOGLE_DRIVE_FILE_ID: ${{ secrets.GOOGLE_DRIVE_FILE_ID }}
+          GOOGLE_DRIVE_ACCESS_TOKEN: ${{ secrets.GOOGLE_DRIVE_ACCESS_TOKEN }}
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+          S3_KEY: ${{ secrets.S3_KEY }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          mkdir -p data/private
+          if ! python scripts/download_private_data.py 2>/dev/null; then
+            echo "PR_EVAL_SKIP=1" >> $GITHUB_ENV
+            echo "Private test data not available for PR evaluation. Configure repository secrets (PRIVATE_DATA_*) for scores."
+          fi
+
+      - name: Evaluate submissions
+        if: env.PR_EVAL_SKIP != '1'
+        run: |
+          python scripts/evaluate_all_submissions.py || true
+
+      - name: Post evaluation comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const issue_number = context.payload.pull_request.number;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const marker = '<!-- evaluation-bot -->';
+
+            let body = '## 🤖 Evaluation Results (pre-merge preview)\n\n';
+            if (process.env.PR_EVAL_SKIP === '1') {
+              body += '⚠️ Private test data is not configured for PR runs. Your submission will be evaluated when the PR is merged.\n\n';
+            } else if (fs.existsSync('evaluation_results.json')) {
+              const data = JSON.parse(fs.readFileSync('evaluation_results.json', 'utf8'));
+              if (data.length === 0) {
+                body += 'No valid submissions could be evaluated (check CSV format: `user_id`, `snapshot_id`, `predicted_role`).\n\n';
+              } else {
+                body += '| Team | Weighted Macro-F1 | Overall Macro-F1 | Rare Transitions F1 |\n';
+                body += '|------|-------------------|------------------|---------------------|\n';
+                for (const x of data) {
+                  const s = x.scores || {};
+                  body += `| ${x.team} | ${(s.weighted_f1 ?? 0).toFixed(6)} | ${(s.overall_macro_f1 ?? 0).toFixed(6)} | ${(s.rare_transitions_f1 ?? 0).toFixed(6)} |\n`;
+                }
+                body += '\n✅ After merge, the leaderboard will be updated automatically.';
+              }
+            } else {
+              body += 'No evaluation results (run may have failed). Check workflow logs.\n\n';
+            }
+            body += '\n\n' + marker;
+
+            const { data: comments } = await github.rest.issues.listComments({ owner, repo, issue_number });
+            const botComment = comments.find(c => c.body && c.body.includes(marker));
+            if (botComment) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: botComment.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }
