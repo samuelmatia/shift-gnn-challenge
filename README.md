@@ -175,7 +175,7 @@ To ensure fair competition and focus on scalable GNN methods:
 ```
 
 **Put your submission in `submissions/` and name it exactly `challenge_submission.csv`.**  
-Do **not** put it in `submissions_examples/` — that folder is for examples only and is **never** evaluated or used for the leaderboard.
+
 
 5. **Score Your Submission**
 
@@ -192,7 +192,6 @@ python scoring_script.py submissions/challenge_submission.csv
 
 ## 🏆 Leaderboard
 
-The leaderboard is updated automatically when you open or update a Pull Request with a CSV in `submissions/`
 
 👉 **[View Live Leaderboard](https://samuelmatia.github.io/gnn-role-transition-challenge/leaderboard.html)**
 

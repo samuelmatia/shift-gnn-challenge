@@ -802,6 +802,20 @@ def remove_teams_from_leaderboard(team_names, leaderboard_path=None):
     return leaderboard
 
 
+def clear_leaderboard(leaderboard_path=None):
+    """Empty the leaderboard (remove all submissions) and regenerate HTML."""
+    path = Path(leaderboard_path) if leaderboard_path else Path(__file__).parent.parent / 'leaderboard.json'
+    leaderboard = {
+        'last_updated': datetime.now().isoformat(),
+        'submissions': []
+    }
+    with open(path, 'w') as f:
+        json.dump(leaderboard, f, indent=2)
+    generate_html(leaderboard, html_path=path.parent / 'leaderboard.html')
+    print("Leaderboard cleared (0 submissions)")
+    return leaderboard
+
+
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='Generate or merge leaderboard')
@@ -816,8 +830,11 @@ if __name__ == '__main__':
     parser.add_argument('--leaderboard-in', default='/tmp/leaderboard.json', help='Input leaderboard path for --filter-allowed')
     parser.add_argument('--submissions-dir', default='submissions', help='Submissions dir for --filter-allowed (CSV stems = teams on main)')
     parser.add_argument('--pr-results', default='/tmp/evaluation_results.json', help='PR evaluation_results.json for --filter-allowed')
+    parser.add_argument('--clear', action='store_true', help='Empty the leaderboard (remove all submissions) and regenerate HTML')
     args = parser.parse_args()
-    if args.merge_pr:
+    if args.clear:
+        clear_leaderboard(args.leaderboard)
+    elif args.merge_pr:
         merge_pr_results_into_leaderboard(
             args.current_leaderboard,
             args.evaluation_results,
