@@ -106,8 +106,11 @@ def generate_leaderboard():
     print(f"Generated leaderboard with {len(submissions)} teams")
     return leaderboard
 
-def generate_html(leaderboard):
+def generate_html(leaderboard, html_path=None):
     """Generate HTML leaderboard with animated graph background."""
+    if html_path is None:
+        html_path = Path(__file__).parent.parent / 'leaderboard.html'
+    html_path = Path(html_path)
     html = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -683,12 +686,77 @@ def generate_html(leaderboard):
 </body>
 </html>"""
     
-    html_file = Path(__file__).parent.parent / 'leaderboard.html'
-    with open(html_file, 'w') as f:
+    with open(html_path, 'w') as f:
         f.write(html)
     
-    print(f"Generated {html_file}")
+    print(f"Generated {html_path}")
+
+
+def merge_pr_results_into_leaderboard(current_leaderboard_path, evaluation_results_path, output_dir=None):
+    """
+    Merge PR evaluation results into the current leaderboard and write leaderboard.json + leaderboard.html.
+    Used when a PR is evaluated: merge the PR's scores into main's leaderboard without re-evaluating all submissions.
+    """
+    output_dir = Path(output_dir) if output_dir else Path(__file__).parent.parent
+    current_path = Path(current_leaderboard_path)
+    results_path = Path(evaluation_results_path)
+
+    if not results_path.exists() or results_path.stat().st_size == 0:
+        print("No evaluation results to merge")
+        return None
+
+    with open(results_path, 'r') as f:
+        results = json.load(f)
+    if not results:
+        print("Evaluation results empty, nothing to merge")
+        return None
+
+    existing = {"last_updated": None, "submissions": []}
+    if current_path.exists():
+        with open(current_path, 'r') as f:
+            existing = json.load(f)
+
+    existing_map = {sub["team"]: sub for sub in existing.get("submissions", [])}
+    for result in results:
+        team = result["team"]
+        scores = result.get("scores", {})
+        entry = {
+            "team": team,
+            "submission_file": result.get("file", ""),
+            "weighted_f1": scores.get("weighted_f1", 0.0),
+            "overall_f1": scores.get("overall_macro_f1", 0.0),
+            "rare_f1": scores.get("rare_transitions_f1", 0.0),
+            "timestamp": datetime.now().isoformat(),
+        }
+        if team not in existing_map or entry["weighted_f1"] > existing_map[team]["weighted_f1"]:
+            existing_map[team] = entry
+
+    submissions = sorted(existing_map.values(), key=lambda x: x["weighted_f1"], reverse=True)
+    leaderboard = {
+        "last_updated": datetime.now().isoformat(),
+        "submissions": submissions,
+    }
+    out_json = output_dir / "leaderboard.json"
+    with open(out_json, "w") as f:
+        json.dump(leaderboard, f, indent=2)
+    generate_html(leaderboard, html_path=output_dir / "leaderboard.html")
+    print(f"Merged PR results into leaderboard ({len(submissions)} teams), wrote {out_json}")
+    return leaderboard
+
 
 if __name__ == '__main__':
-    generate_leaderboard()
-
+    import argparse
+    parser = argparse.ArgumentParser(description='Generate or merge leaderboard')
+    parser.add_argument('--merge-pr', action='store_true', help='Merge PR evaluation results into current leaderboard')
+    parser.add_argument('--current-leaderboard', default='current_leaderboard.json', help='Path to current leaderboard.json (from main)')
+    parser.add_argument('--evaluation-results', default='evaluation_results.json', help='Path to evaluation_results.json from PR run')
+    parser.add_argument('--output-dir', default=None, help='Output directory for leaderboard.json/html (default: repo root)')
+    args = parser.parse_args()
+    if args.merge_pr:
+        merge_pr_results_into_leaderboard(
+            args.current_leaderboard,
+            args.evaluation_results,
+            args.output_dir,
+        )
+    else:
+        generate_leaderboard()
