@@ -744,6 +744,40 @@ def merge_pr_results_into_leaderboard(current_leaderboard_path, evaluation_resul
     return leaderboard
 
 
+def refresh_html_from_json(leaderboard_path=None):
+    """Load leaderboard.json and regenerate leaderboard.html (e.g. after manual edit)."""
+    path = Path(leaderboard_path) if leaderboard_path else Path(__file__).parent.parent / 'leaderboard.json'
+    if not path.exists():
+        print(f"File not found: {path}")
+        return None
+    with open(path, 'r') as f:
+        leaderboard = json.load(f)
+    html_path = path.parent / 'leaderboard.html'
+    generate_html(leaderboard, html_path=html_path)
+    print(f"Regenerated {html_path} from {path}")
+    return leaderboard
+
+
+def remove_teams_from_leaderboard(team_names, leaderboard_path=None):
+    """Remove one or more teams from leaderboard.json and regenerate HTML."""
+    path = Path(leaderboard_path) if leaderboard_path else Path(__file__).parent.parent / 'leaderboard.json'
+    if not path.exists():
+        print(f"File not found: {path}")
+        return None
+    with open(path, 'r') as f:
+        leaderboard = json.load(f)
+    to_remove = set(team_names)
+    before = len(leaderboard.get('submissions', []))
+    leaderboard['submissions'] = [s for s in leaderboard.get('submissions', []) if s['team'] not in to_remove]
+    removed = before - len(leaderboard['submissions'])
+    leaderboard['last_updated'] = datetime.now().isoformat()
+    with open(path, 'w') as f:
+        json.dump(leaderboard, f, indent=2)
+    generate_html(leaderboard, html_path=path.parent / 'leaderboard.html')
+    print(f"Removed {removed} team(s) from leaderboard: {', '.join(sorted(to_remove))}")
+    return leaderboard
+
+
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='Generate or merge leaderboard')
@@ -751,6 +785,9 @@ if __name__ == '__main__':
     parser.add_argument('--current-leaderboard', default='current_leaderboard.json', help='Path to current leaderboard.json (from main)')
     parser.add_argument('--evaluation-results', default='evaluation_results.json', help='Path to evaluation_results.json from PR run')
     parser.add_argument('--output-dir', default=None, help='Output directory for leaderboard.json/html (default: repo root)')
+    parser.add_argument('--refresh-html', action='store_true', help='Regenerate leaderboard.html from existing leaderboard.json (e.g. after manual edit)')
+    parser.add_argument('--remove-team', action='append', dest='teams', metavar='TEAM', help='Remove team(s) from leaderboard (can be repeated); then regenerate HTML')
+    parser.add_argument('--leaderboard', default=None, help='Path to leaderboard.json (for --refresh-html or --remove-team)')
     args = parser.parse_args()
     if args.merge_pr:
         merge_pr_results_into_leaderboard(
@@ -758,5 +795,13 @@ if __name__ == '__main__':
             args.evaluation_results,
             args.output_dir,
         )
+    elif args.teams:
+        remove_teams_from_leaderboard(args.teams, args.leaderboard)
+    elif args.refresh_html:
+        refresh_html_from_json(args.leaderboard)
     else:
         generate_leaderboard()
+
+
+
+#python3 scripts/generate_leaderboard.py --refresh-html
