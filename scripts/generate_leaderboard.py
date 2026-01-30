@@ -57,18 +57,10 @@ def generate_leaderboard():
         print("No new evaluation results; kept existing leaderboard")
         return leaderboard
 
-    # Get list of teams that have CSV files (from evaluation results)
-    current_teams = {result['team'] for result in results}
+    # Keep all existing submissions (including PR-only teams without CSV on main)
+    existing_map = {sub['team']: sub for sub in existing.get('submissions', [])}
     
-    # Create a map of existing submissions, but only keep those that still have CSV files
-    existing_map = {}
-    for sub in existing.get('submissions', []):
-        team = sub['team']
-        # Only keep if team still has a CSV file
-        if team in current_teams:
-            existing_map[team] = sub
-    
-    # Process new results
+    # Add or update with fresh evaluation results (teams that have a CSV on main)
     for result in results:
         team = result['team']
         scores = result['scores']
@@ -744,6 +736,38 @@ def merge_pr_results_into_leaderboard(current_leaderboard_path, evaluation_resul
     return leaderboard
 
 
+def filter_leaderboard_to_allowed_teams(leaderboard_path, allowed_teams, output_dir=None):
+    """
+    Filter leaderboard to only include teams in allowed_teams.
+    Used by PR workflow: keep only teams that have a CSV on main OR are in the PR's evaluation results.
+    """
+    output_dir = Path(output_dir) if output_dir else Path(leaderboard_path).parent
+    allowed = set(allowed_teams)
+    with open(leaderboard_path, 'r') as f:
+        leaderboard = json.load(f)
+    subs = [s for s in leaderboard.get('submissions', []) if s['team'] in allowed]
+    leaderboard['submissions'] = subs
+    leaderboard['last_updated'] = datetime.now().isoformat()
+    out_json = output_dir / 'leaderboard.json'
+    with open(out_json, 'w') as f:
+        json.dump(leaderboard, f, indent=2)
+    generate_html(leaderboard, html_path=output_dir / 'leaderboard.html')
+    print(f"Filtered leaderboard to {len(subs)} teams (allowed: {len(allowed)})")
+    return leaderboard
+
+
+def allowed_teams_from_submissions_and_pr(submissions_dir, evaluation_results_path):
+    """Teams that have a CSV in submissions_dir OR appear in PR evaluation results."""
+    subs_dir = Path(submissions_dir)
+    teams_from_main = {f.stem for f in subs_dir.glob('*.csv') if 'sample' not in f.name.lower()}
+    teams_from_pr = set()
+    if evaluation_results_path and Path(evaluation_results_path).exists():
+        with open(evaluation_results_path, 'r') as f:
+            results = json.load(f)
+        teams_from_pr = {r.get('team') for r in results if r.get('team')}
+    return teams_from_main | teams_from_pr
+
+
 def refresh_html_from_json(leaderboard_path=None):
     """Load leaderboard.json and regenerate leaderboard.html (e.g. after manual edit)."""
     path = Path(leaderboard_path) if leaderboard_path else Path(__file__).parent.parent / 'leaderboard.json'
@@ -788,6 +812,10 @@ if __name__ == '__main__':
     parser.add_argument('--refresh-html', action='store_true', help='Regenerate leaderboard.html from existing leaderboard.json (e.g. after manual edit)')
     parser.add_argument('--remove-team', action='append', dest='teams', metavar='TEAM', help='Remove team(s) from leaderboard (can be repeated); then regenerate HTML')
     parser.add_argument('--leaderboard', default=None, help='Path to leaderboard.json (for --refresh-html or --remove-team)')
+    parser.add_argument('--filter-allowed', action='store_true', help='Filter leaderboard to teams in submissions/ or in PR results (for PR workflow)')
+    parser.add_argument('--leaderboard-in', default='/tmp/leaderboard.json', help='Input leaderboard path for --filter-allowed')
+    parser.add_argument('--submissions-dir', default='submissions', help='Submissions dir for --filter-allowed (CSV stems = teams on main)')
+    parser.add_argument('--pr-results', default='/tmp/evaluation_results.json', help='PR evaluation_results.json for --filter-allowed')
     args = parser.parse_args()
     if args.merge_pr:
         merge_pr_results_into_leaderboard(
@@ -799,6 +827,9 @@ if __name__ == '__main__':
         remove_teams_from_leaderboard(args.teams, args.leaderboard)
     elif args.refresh_html:
         refresh_html_from_json(args.leaderboard)
+    elif args.filter_allowed:
+        allowed = allowed_teams_from_submissions_and_pr(args.submissions_dir, args.pr_results)
+        filter_leaderboard_to_allowed_teams(args.leaderboard_in, allowed, output_dir=Path(__file__).parent.parent)
     else:
         generate_leaderboard()
 
