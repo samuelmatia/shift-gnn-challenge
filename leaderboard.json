@@ -1,4 +1,13 @@
 {
-  "last_updated": "2026-01-30T22:57:43.076232",
-  "submissions": []
+  "last_updated": "2026-01-30T22:02:11.576513",
+  "submissions": [
+    {
+      "team": "samuelmatia",
+      "submission_file": "/home/runner/work/gnn-role-transition-challenge/gnn-role-transition-challenge/submissions/challenge_submission.csv",
+      "weighted_f1": 0.21132707086488045,
+      "overall_f1": 0.33832406785937313,
+      "rare_f1": 0.0,
+      "timestamp": "2026-01-30T22:02:11.576502"
+    }
+  ]
 }
