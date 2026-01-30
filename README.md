@@ -185,14 +185,13 @@ python scoring_script.py submissions/your_team_name.csv
 
 6. **Create a Pull Request** with your submission file:
    - Add your CSV file to `submissions/your_team_name.csv`
-   - A GitHub Action runs on the PR and posts your score as a comment (pre-merge preview)
-   - After your PR is merged, the public leaderboard is updated automatically
+   - A GitHub Action runs on the PR, evaluates your submission, posts your score as a comment, and updates the public leaderboard
 
 
 
 ## 🏆 Leaderboard
 
-The leaderboard is updated automatically when submissions are merged to `main` (e.g. after your Pull Request is merged) or when you push new CSV files to `submissions/` on the main branch.
+The leaderboard is updated automatically when you open or update a Pull Request with a CSV in `submissions/`, or when you push new CSV files to `submissions/` on the main branch.
 
 👉 **[View Live Leaderboard](https://samuelmatia.github.io/gnn-role-transition-challenge/leaderboard.html)**
 

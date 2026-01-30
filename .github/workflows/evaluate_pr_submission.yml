@@ -1,5 +1,4 @@
-# Evaluate submission on Pull Request and post score as comment.
-# External participants get immediate feedback; leaderboard updates when PR is merged (main workflow).
+# Evaluate submission on Pull Request, post score as comment, and update the public leaderboard on main.
 name: Evaluate PR Submission
 
 on:
@@ -15,7 +14,7 @@ jobs:
   evaluate:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       pull-requests: write
 
     steps:
@@ -57,6 +56,34 @@ jobs:
         run: |
           python scripts/evaluate_all_submissions.py || true
 
+      - name: Fetch main and merge leaderboard
+        id: merge
+        if: env.PR_EVAL_SKIP != '1'
+        run: |
+          git fetch origin main
+          git show origin/main:leaderboard.json > current_leaderboard.json 2>/dev/null || echo '{"last_updated": null, "submissions": []}' > current_leaderboard.json
+          python scripts/generate_leaderboard.py --merge-pr --current-leaderboard current_leaderboard.json --evaluation-results evaluation_results.json
+          if [ -f leaderboard.json ]; then
+            cp leaderboard.json /tmp/leaderboard.json
+            cp leaderboard.html /tmp/leaderboard.html
+            echo "merged=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Push leaderboard to main
+        if: env.PR_EVAL_SKIP != '1' && steps.merge.outputs.merged == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git checkout main
+          git pull origin main
+          cp /tmp/leaderboard.json leaderboard.json
+          cp /tmp/leaderboard.html leaderboard.html
+          git add leaderboard.json leaderboard.html
+          if ! git diff --staged --quiet; then
+            git commit -m "Auto-update leaderboard from PR #${{ github.event.pull_request.number }} [skip ci]"
+            git push origin main
+          fi
+
       - name: Post evaluation comment
         uses: actions/github-script@v7
         with:
@@ -81,7 +108,7 @@ jobs:
                   const s = x.scores || {};
                   body += `| ${x.team} | ${(s.weighted_f1 ?? 0).toFixed(6)} | ${(s.overall_macro_f1 ?? 0).toFixed(6)} | ${(s.rare_transitions_f1 ?? 0).toFixed(6)} |\n`;
                 }
-                body += '\n✅ After merge, the leaderboard will be updated automatically.';
+                body += '\n✅ The public leaderboard has been updated with this submission.';
               }
             } else {
               body += 'No evaluation results (run may have failed). Check workflow logs.\n\n';
