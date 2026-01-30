@@ -1,3 +1,4 @@
+# Updates leaderboard from submissions/ only (submissions_examples/ is ignored).
 name: Update Leaderboard
 
 on:
@@ -5,7 +6,7 @@ on:
     branches:
       - main
     paths:
-      - 'submissions/**/*.csv'
+      - 'submissions/**/*.csv'   # submissions_examples/ changes do not trigger
   workflow_dispatch:
 
 concurrency:

@@ -1,5 +1,7 @@
 """
-Evaluate all submissions in the submissions/ directory.
+Evaluate submissions in the submissions/ directory only.
+submissions_examples/ is never read (examples only, no evaluation, no leaderboard).
+In PR context: only submissions/challenge_submission.csv is considered (fixed filename).
 """
 import os
 import json
@@ -47,29 +49,45 @@ def evaluate_submission(submission_file):
         return None
 
 def main():
+    # Only submissions/ is evaluated; submissions_examples/ is ignored
     submissions_dir = Path(__file__).parent.parent / 'submissions'
     results = []
-    
-    # Find all CSV files (except sample submissions)
-    csv_files = list(submissions_dir.glob('*.csv'))
-    csv_files = [f for f in csv_files if 'sample' not in f.name.lower()]
-    
-    if not csv_files:
-        print("No submission files found in submissions/ directory")
-        # Create empty results file so generate_leaderboard doesn't fail
-        results_file = Path(__file__).parent.parent / 'evaluation_results.json'
-        with open(results_file, 'w') as f:
-            json.dump([], f, indent=2)
-        return
-    
-    print(f"Found {len(csv_files)} submission(s) to evaluate")
-    
+    # PR context: one submission per PR, team name = GitHub username (set by workflow)
+    pr_team_name = os.environ.get('PR_TEAM_NAME', '').strip()
+
+    # PR context: only challenge_submission.csv is considered (fixed filename)
+    REQUIRED_PR_FILENAME = 'challenge_submission.csv'
+
+    if pr_team_name:
+        submission_file = submissions_dir / REQUIRED_PR_FILENAME
+        if not submission_file.exists():
+            print(f"PR mode: {REQUIRED_PR_FILENAME} not found in submissions/")
+            print(f"Please add or rename your file to submissions/{REQUIRED_PR_FILENAME}")
+            results_file = Path(__file__).parent.parent / 'evaluation_results.json'
+            with open(results_file, 'w') as f:
+                json.dump([], f, indent=2)
+            return
+        csv_files = [submission_file]
+        print(f"PR mode: evaluating {REQUIRED_PR_FILENAME} (team = {pr_team_name})")
+    else:
+        # Main branch: evaluate all CSV files in submissions/
+        csv_files = list(submissions_dir.glob('*.csv'))
+        csv_files = [f for f in csv_files if 'sample' not in f.name.lower()]
+        csv_files.sort(key=lambda f: f.name)
+        if not csv_files:
+            print("No submission files found in submissions/ directory")
+            results_file = Path(__file__).parent.parent / 'evaluation_results.json'
+            with open(results_file, 'w') as f:
+                json.dump([], f, indent=2)
+            return
+        print(f"Found {len(csv_files)} submission(s) to evaluate")
+
     for csv_file in csv_files:
         print(f"\nEvaluating {csv_file.name}...")
         scores = evaluate_submission(str(csv_file))
-        
+
         if scores:
-            team_name = csv_file.stem
+            team_name = pr_team_name if pr_team_name else csv_file.stem
             results.append({
                 'file': str(csv_file),
                 'team': team_name,
