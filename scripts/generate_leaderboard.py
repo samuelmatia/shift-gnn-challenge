@@ -852,4 +852,4 @@ if __name__ == '__main__':
 
 
 
-#python3 scripts/generate_leaderboard.py --remove-team "team_sam_demo2"
+#python3 scripts/generate_leaderboard.py --remove-team "NOM_EXACT"
