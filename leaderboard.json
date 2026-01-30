@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-01-30T15:45:48.194206",
+  "last_updated": "2026-01-30T15:50:33.871231",
   "submissions": [
     {
       "team": "team_sam_trad_ML_RandomForest",
@@ -24,14 +24,6 @@
       "overall_f1": 0.3253763635374666,
       "rare_f1": 0.0,
       "timestamp": "2026-01-25T09:11:12.349972"
-    },
-    {
-      "team": "team_sam_test_Pull_Request",
-      "submission_file": "/home/runner/work/gnn-role-transition-challenge/gnn-role-transition-challenge/submissions/team_sam_test_Pull_Request.csv",
-      "weighted_f1": 0.18058829574520371,
-      "overall_f1": 0.3253755844431594,
-      "rare_f1": 0.0,
-      "timestamp": "2026-01-30T14:36:09.721201"
     }
   ]
 }
