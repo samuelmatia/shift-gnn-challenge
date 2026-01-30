@@ -191,7 +191,7 @@ python scoring_script.py submissions/your_team_name.csv
 
 ## 🏆 Leaderboard
 
-The leaderboard is updated automatically when you open or update a Pull Request with a CSV in `submissions/`, or when you push new CSV files to `submissions/` on the main branch.
+The leaderboard is updated automatically when you open or update a Pull Request with a CSV in `submissions/`
 
 👉 **[View Live Leaderboard](https://samuelmatia.github.io/gnn-role-transition-challenge/leaderboard.html)**
 
