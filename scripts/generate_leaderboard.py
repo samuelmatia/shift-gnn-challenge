@@ -44,6 +44,19 @@ def generate_leaderboard():
     results = load_evaluation_results()
     existing = load_existing_leaderboard()
     
+    # If no evaluation results (e.g. all failed), keep existing leaderboard and only refresh timestamp
+    if not results and existing.get('submissions'):
+        leaderboard = {
+            'last_updated': datetime.now().isoformat(),
+            'submissions': existing['submissions']
+        }
+        leaderboard_file = Path(__file__).parent.parent / 'leaderboard.json'
+        with open(leaderboard_file, 'w') as f:
+            json.dump(leaderboard, f, indent=2)
+        generate_html(leaderboard)
+        print("No new evaluation results; kept existing leaderboard")
+        return leaderboard
+
     # Get list of teams that have CSV files (from evaluation results)
     current_teams = {result['team'] for result in results}
     

@@ -52,7 +52,7 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       run: |
         mkdir -p data/private
-        python scripts/download_private_data.py || echo "Warning: Could not download private data. Continuing anyway."
+        python scripts/download_private_data.py
     
     - name: Evaluate all submissions
       run: |

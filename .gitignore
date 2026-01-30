@@ -25,6 +25,10 @@ ENV/
 Thumbs.db
 
 
+# Evaluation artifacts (generated in CI, not committed)
+evaluation_results.json
+results/
+
 # Leaderboard data (will be generated, but we need to commit them for GitHub Pages)
 # Note: These files are auto-generated but must be in the repo for GitHub Pages to work
 # leaderboard.json
