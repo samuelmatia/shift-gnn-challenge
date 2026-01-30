@@ -74,6 +74,7 @@ jobs:
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
+          git checkout -- leaderboard.json leaderboard.html
           git checkout main
           git pull origin main
           cp /tmp/leaderboard.json leaderboard.json
