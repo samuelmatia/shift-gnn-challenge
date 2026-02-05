@@ -48,7 +48,7 @@ The dataset is based on the **Super User Stack Exchange temporal network** from 
 - `train.parquet` - Training set with labels 
 - `test_features.parquet` - Test set features without labels
 
-The provided features (`out_degree`, `in_degree`, etc.) are derived from the temporal graph structure. The challenge **requires graph neural networks (GNNs)** or graph-based models that exploit the full adjacency *E_t*; feature-only tabular models are not allowed.
+The provided features (`out_degree`, `in_degree`, etc.) are derived from the temporal graph structure. The challenge **requires graph neural networks (GNNs)** or graph-based models that exploit the full adjacency $E_t$; feature-only tabular models are not allowed.
 
 #### Column Descriptions
 
