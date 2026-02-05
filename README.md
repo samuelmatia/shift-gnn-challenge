@@ -21,7 +21,7 @@ Roles are assigned using a fixed heuristic based on user activity and interactio
 
 ### Formal Setup
 
-Let *G_t = (V, E_t)* be the temporal interaction graph at time *t*. Each node *v ∈ V* has a role *y_v^t ∈ {0, …, 4}*. Given the interaction history *H_v^t* of user *v* up to time *t*, the task is to predict *y_v^{t+k}* (the role at the next snapshot).
+Let $G_t = (V, E_t)$ be the temporal interaction graph at time $t$. Each node $v \in V$ has a role $y_v^t \in \{0, \ldots, 4\}$. Given the interaction history $H_v^t$ of user $v$ up to time $t$, the task is to predict $y_v^{t+k}$ (the role at the next snapshot).
 
 ### What's Challenging ? 
 
