@@ -17,6 +17,12 @@ The task is to predict **role transitions** - how a user's role evolves from one
 - **3 - Expert**: Highly active user who provides many answers (high out-degree)
 - **4 - Moderator**: Very active user who helps many different users (high activity, high unique recipients)
 
+Roles are assigned using a fixed heuristic based on user activity and interaction patterns (degrees, activity spans), and remain consistent across all temporal snapshots. They are not human-annotated ground truth, but deterministic proxy labels.
+
+### Formal Setup
+
+Let *G_t = (V, E_t)* be the temporal interaction graph at time *t*. Each node *v ∈ V* has a role *y_v^t ∈ {0, …, 4}*. Given the interaction history *H_v^t* of user *v* up to time *t*, the task is to predict *y_v^{t+k}* (the role at the next snapshot).
+
 ### What's Challenging ? 
 
 1. **Temporal Shift**: Training data comes from 2009-2013, validation from 2013-2014, and test from 2014-2016. The distribution of user behaviors and network patterns changes over time, making generalization challenging.
@@ -41,6 +47,8 @@ The dataset is based on the **Super User Stack Exchange temporal network** from 
 **Files available in `data/processed/` :**
 - `train.parquet` - Training set with labels 
 - `test_features.parquet` - Test set features without labels
+
+The provided features (`out_degree`, `in_degree`, etc.) are derived from the temporal graph structure. The challenge **requires graph neural networks (GNNs)** or graph-based models that exploit the full adjacency *E_t*; feature-only tabular models are not allowed.
 
 #### Column Descriptions
 
