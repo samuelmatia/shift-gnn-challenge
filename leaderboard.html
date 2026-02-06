@@ -272,25 +272,42 @@
         </div>
         <p class="last-updated">Last updated: January 30, 2026 at 22:25:11</p>
         
+        <div class="controls" style="margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+            <input type="text" id="search" placeholder="Search team, notes, date..." style="padding: 10px 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: white; min-width: 220px;">
+            <select id="filter-model" style="padding: 10px 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: white;">
+                <option value="">All (human, llm, human+llm)</option>
+                <option value="human">Human</option>
+                <option value="llm">LLM</option>
+                <option value="human+llm">Human+LLM</option>
+                <option value="unknown">Unknown</option>
+            </select>
+            <label style="color: rgba(255,255,255,0.8); display: flex; align-items: center; gap: 6px;"><input type="checkbox" id="col-model" checked> Model</label>
+            <label style="color: rgba(255,255,255,0.8); display: flex; align-items: center; gap: 6px;"><input type="checkbox" id="col-notes" checked> Notes</label>
+        </div>
+        
         <div class="leaderboard">
-            <table>
+            <table id="leaderboard-table">
                 <thead>
                     <tr>
-                        <th class="rank">Rank</th>
-                        <th>Team</th>
-                        <th class="score primary-score">Weighted Macro-F1</th>
-                        <th class="score">Overall Macro-F1</th>
-                        <th class="score">Rare Transitions F1</th>
-                        <th>Submission Time</th>
+                        <th class="rank sortable" data-sort="rank">Rank</th>
+                        <th class="sortable" data-sort="team">Team</th>
+                        <th class="score primary-score sortable" data-sort="weighted_f1">Weighted Macro-F1</th>
+                        <th class="score sortable" data-sort="overall_f1">Overall Macro-F1</th>
+                        <th class="score sortable" data-sort="rare_f1">Rare Transitions F1</th>
+                        <th class="col-model sortable" data-sort="model_type">Model Type</th>
+                        <th class="col-notes sortable" data-sort="notes">Notes</th>
+                        <th class="sortable" data-sort="timestamp">Submission Time</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr style="animation-delay: 0.1s;">
+                    <tr data-team="samuelmatia" data-model-type="unknown" data-notes="" data-timestamp="2026-01-30T22:25:11.409095" data-weighted-f1="0.21132700217814976" data-overall-f1="0.33832355908636835" data-rare-f1="0.0" style="animation-delay: 0.1s;">
                         <td class="rank rank-1"><span class="medal">🥇 </span>1</td>
                         <td class="team-name">samuelmatia</td>
                         <td class="score primary-score">0.211327</td>
                         <td class="score">0.338324</td>
                         <td class="score">0.000000</td>
+                        <td class="col-model">unknown</td>
+                        <td class="col-notes"></td>
                         <td>January 30, 2026 at 22:25:11</td>
                     </tr>
                 </tbody>
@@ -545,6 +562,74 @@
         
         // Start animation
         animate();
+    </script>
+    <script>
+        // Interactive leaderboard: search, filter by model type, sortable columns, column toggle
+        (function() {
+            const searchEl = document.getElementById('search');
+            const filterModelEl = document.getElementById('filter-model');
+            const colModelEl = document.getElementById('col-model');
+            const colNotesEl = document.getElementById('col-notes');
+            const table = document.getElementById('leaderboard-table');
+            if (!table) return;
+            const rows = Array.from(table.querySelectorAll('tbody tr')).filter(r => !r.classList.contains('empty'));
+            const headers = table.querySelectorAll('th.sortable');
+
+            function applyFilters() {
+                const q = (searchEl?.value || '').toLowerCase();
+                const modelFilter = filterModelEl?.value || '';
+                rows.forEach((row, i) => {
+                    const team = (row.dataset.team || '').toLowerCase();
+                    const notes = (row.dataset.notes || '').toLowerCase();
+                    const ts = (row.dataset.timestamp || '').toLowerCase();
+                    const modelType = row.dataset.modelType || 'unknown';
+                    const matchSearch = !q || team.includes(q) || notes.includes(q) || ts.includes(q);
+                    const matchModel = !modelFilter || modelType === modelFilter;
+                    row.style.display = (matchSearch && matchModel) ? '' : 'none';
+                });
+            }
+            function applyColumnVisibility() {
+                const showModel = colModelEl?.checked !== false;
+                const showNotes = colNotesEl?.checked !== false;
+                table.querySelectorAll('.col-model').forEach(el => { el.style.display = showModel ? '' : 'none'; });
+                table.querySelectorAll('.col-notes').forEach(el => { el.style.display = showNotes ? '' : 'none'; });
+                table.querySelectorAll('th.col-model').forEach(el => { el.style.display = showModel ? '' : 'none'; });
+                table.querySelectorAll('th.col-notes').forEach(el => { el.style.display = showNotes ? '' : 'none'; });
+            }
+            function getVal(row, col) {
+                const map = { rank:1, team:2, weighted_f1:3, overall_f1:4, rare_f1:5, model_type:6, notes:7, timestamp:8 };
+                const ds = { weighted_f1:'weightedF1', overall_f1:'overallF1', rare_f1:'rareF1', model_type:'modelType' };
+                if (ds[col] && row.dataset[ds[col]]) return row.dataset[ds[col]];
+                if (col === 'team') return row.dataset.team || '';
+                if (col === 'notes') return row.dataset.notes || '';
+                if (col === 'timestamp') return row.dataset.timestamp || '';
+                const idx = map[col]; return idx ? row.cells[idx-1]?.textContent?.trim() || '' : '';
+            }
+            function sortBy(col) {
+                const asc = table.dataset.sortDir === col ? table.dataset.sortAsc !== 'true' : col === 'weighted_f1' || col === 'rank';
+                table.dataset.sortDir = col;
+                table.dataset.sortAsc = asc ? 'true' : 'false';
+                const visible = rows.filter(r => r.style.display !== 'none').slice();
+                const numCols = ['rank','weighted_f1','overall_f1','rare_f1'];
+                visible.sort((a, b) => {
+                    let va = getVal(a, col), vb = getVal(b, col);
+                    if (numCols.includes(col)) {
+                        va = parseFloat(va) || 0; vb = parseFloat(vb) || 0;
+                        return asc ? va - vb : vb - va;
+                    }
+                    va = String(va).toLowerCase(); vb = String(vb).toLowerCase();
+                    return asc ? (va < vb ? -1 : va > vb ? 1 : 0) : (vb < va ? -1 : vb > va ? 1 : 0);
+                });
+                const tbody = table.querySelector('tbody');
+                visible.forEach(r => tbody.appendChild(r));
+            }
+            searchEl?.addEventListener('input', applyFilters);
+            filterModelEl?.addEventListener('change', applyFilters);
+            colModelEl?.addEventListener('change', applyColumnVisibility);
+            colNotesEl?.addEventListener('change', applyColumnVisibility);
+            headers?.forEach(th => th.addEventListener('click', () => sortBy(th.dataset.sort)));
+            applyColumnVisibility();
+        })();
     </script>
 </body>
 </html>

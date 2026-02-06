@@ -71,7 +71,9 @@ def generate_leaderboard():
             'weighted_f1': scores.get('weighted_f1', 0.0),
             'overall_f1': scores.get('overall_macro_f1', 0.0),
             'rare_f1': scores.get('rare_transitions_f1', 0.0),
-            'timestamp': datetime.now().isoformat()
+            'timestamp': datetime.now().isoformat(),
+            'model_type': result.get('model_type', 'unknown'),
+            'notes': result.get('notes', '')
         }
         
         # Update if better score or new team
@@ -377,16 +379,31 @@ def generate_html(leaderboard, html_path=None):
         </div>
         <p class="last-updated">Last updated: """ + format_datetime(leaderboard.get("last_updated")) + """</p>
         
+        <div class="controls" style="margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+            <input type="text" id="search" placeholder="Search team, notes, date..." style="padding: 10px 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: white; min-width: 220px;">
+            <select id="filter-model" style="padding: 10px 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: white;">
+                <option value="">All (human, llm, human+llm)</option>
+                <option value="human">Human</option>
+                <option value="llm">LLM</option>
+                <option value="human+llm">Human+LLM</option>
+                <option value="unknown">Unknown</option>
+            </select>
+            <label style="color: rgba(255,255,255,0.8); display: flex; align-items: center; gap: 6px;"><input type="checkbox" id="col-model" checked> Model</label>
+            <label style="color: rgba(255,255,255,0.8); display: flex; align-items: center; gap: 6px;"><input type="checkbox" id="col-notes" checked> Notes</label>
+        </div>
+        
         <div class="leaderboard">
-            <table>
+            <table id="leaderboard-table">
                 <thead>
                     <tr>
-                        <th class="rank">Rank</th>
-                        <th>Team</th>
-                        <th class="score primary-score">Weighted Macro-F1</th>
-                        <th class="score">Overall Macro-F1</th>
-                        <th class="score">Rare Transitions F1</th>
-                        <th>Submission Time</th>
+                        <th class="rank sortable" data-sort="rank">Rank</th>
+                        <th class="sortable" data-sort="team">Team</th>
+                        <th class="score primary-score sortable" data-sort="weighted_f1">Weighted Macro-F1</th>
+                        <th class="score sortable" data-sort="overall_f1">Overall Macro-F1</th>
+                        <th class="score sortable" data-sort="rare_f1">Rare Transitions F1</th>
+                        <th class="col-model sortable" data-sort="model_type">Model Type</th>
+                        <th class="col-notes sortable" data-sort="notes">Notes</th>
+                        <th class="sortable" data-sort="timestamp">Submission Time</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -394,7 +411,7 @@ def generate_html(leaderboard, html_path=None):
     
     if not leaderboard.get("submissions"):
         html += """                    <tr>
-                        <td colspan="6" class="empty">No submissions yet. Be the first! 🚀</td>
+                        <td colspan="8" class="empty">No submissions yet. Be the first! 🚀</td>
                     </tr>
 """
     else:
@@ -408,16 +425,19 @@ def generate_html(leaderboard, html_path=None):
             elif idx == 3:
                 medal = "🥉 "
             
-            timestamp = entry.get("timestamp", "")
-            if timestamp:
-                timestamp = format_datetime(timestamp)
+            ts_raw = entry.get("timestamp", "")
+            timestamp = format_datetime(ts_raw) if ts_raw else ""
+            model_type = entry.get("model_type", "unknown")
+            notes = (entry.get("notes", "") or "").replace('"', '&quot;')
             
-            html += f"""                    <tr style="animation-delay: {idx * 0.1}s;">
+            html += f"""                    <tr data-team="{entry['team']}" data-model-type="{model_type}" data-notes="{notes}" data-timestamp="{ts_raw}" data-weighted-f1="{entry['weighted_f1']}" data-overall-f1="{entry['overall_f1']}" data-rare-f1="{entry['rare_f1']}" style="animation-delay: {idx * 0.1}s;">
                         <td class="rank {rank_class}"><span class="medal">{medal}</span>{idx}</td>
                         <td class="team-name">{entry['team']}</td>
                         <td class="score primary-score">{entry['weighted_f1']:.6f}</td>
                         <td class="score">{entry['overall_f1']:.6f}</td>
                         <td class="score">{entry['rare_f1']:.6f}</td>
+                        <td class="col-model">{model_type}</td>
+                        <td class="col-notes">{notes}</td>
                         <td>{timestamp}</td>
                     </tr>
 """
@@ -675,6 +695,74 @@ def generate_html(leaderboard, html_path=None):
         // Start animation
         animate();
     </script>
+    <script>
+        // Interactive leaderboard: search, filter by model type, sortable columns, column toggle
+        (function() {
+            const searchEl = document.getElementById('search');
+            const filterModelEl = document.getElementById('filter-model');
+            const colModelEl = document.getElementById('col-model');
+            const colNotesEl = document.getElementById('col-notes');
+            const table = document.getElementById('leaderboard-table');
+            if (!table) return;
+            const rows = Array.from(table.querySelectorAll('tbody tr')).filter(r => !r.classList.contains('empty'));
+            const headers = table.querySelectorAll('th.sortable');
+
+            function applyFilters() {
+                const q = (searchEl?.value || '').toLowerCase();
+                const modelFilter = filterModelEl?.value || '';
+                rows.forEach((row, i) => {
+                    const team = (row.dataset.team || '').toLowerCase();
+                    const notes = (row.dataset.notes || '').toLowerCase();
+                    const ts = (row.dataset.timestamp || '').toLowerCase();
+                    const modelType = row.dataset.modelType || 'unknown';
+                    const matchSearch = !q || team.includes(q) || notes.includes(q) || ts.includes(q);
+                    const matchModel = !modelFilter || modelType === modelFilter;
+                    row.style.display = (matchSearch && matchModel) ? '' : 'none';
+                });
+            }
+            function applyColumnVisibility() {
+                const showModel = colModelEl?.checked !== false;
+                const showNotes = colNotesEl?.checked !== false;
+                table.querySelectorAll('.col-model').forEach(el => { el.style.display = showModel ? '' : 'none'; });
+                table.querySelectorAll('.col-notes').forEach(el => { el.style.display = showNotes ? '' : 'none'; });
+                table.querySelectorAll('th.col-model').forEach(el => { el.style.display = showModel ? '' : 'none'; });
+                table.querySelectorAll('th.col-notes').forEach(el => { el.style.display = showNotes ? '' : 'none'; });
+            }
+            function getVal(row, col) {
+                const map = { rank:1, team:2, weighted_f1:3, overall_f1:4, rare_f1:5, model_type:6, notes:7, timestamp:8 };
+                const ds = { weighted_f1:'weightedF1', overall_f1:'overallF1', rare_f1:'rareF1', model_type:'modelType' };
+                if (ds[col] && row.dataset[ds[col]]) return row.dataset[ds[col]];
+                if (col === 'team') return row.dataset.team || '';
+                if (col === 'notes') return row.dataset.notes || '';
+                if (col === 'timestamp') return row.dataset.timestamp || '';
+                const idx = map[col]; return idx ? row.cells[idx-1]?.textContent?.trim() || '' : '';
+            }
+            function sortBy(col) {
+                const asc = table.dataset.sortDir === col ? table.dataset.sortAsc !== 'true' : col === 'weighted_f1' || col === 'rank';
+                table.dataset.sortDir = col;
+                table.dataset.sortAsc = asc ? 'true' : 'false';
+                const visible = rows.filter(r => r.style.display !== 'none').slice();
+                const numCols = ['rank','weighted_f1','overall_f1','rare_f1'];
+                visible.sort((a, b) => {
+                    let va = getVal(a, col), vb = getVal(b, col);
+                    if (numCols.includes(col)) {
+                        va = parseFloat(va) || 0; vb = parseFloat(vb) || 0;
+                        return asc ? va - vb : vb - va;
+                    }
+                    va = String(va).toLowerCase(); vb = String(vb).toLowerCase();
+                    return asc ? (va < vb ? -1 : va > vb ? 1 : 0) : (vb < va ? -1 : vb > va ? 1 : 0);
+                });
+                const tbody = table.querySelector('tbody');
+                visible.forEach(r => tbody.appendChild(r));
+            }
+            searchEl?.addEventListener('input', applyFilters);
+            filterModelEl?.addEventListener('change', applyFilters);
+            colModelEl?.addEventListener('change', applyColumnVisibility);
+            colNotesEl?.addEventListener('change', applyColumnVisibility);
+            headers?.forEach(th => th.addEventListener('click', () => sortBy(th.dataset.sort)));
+            applyColumnVisibility();
+        })();
+    </script>
 </body>
 </html>"""
     
@@ -719,6 +807,8 @@ def merge_pr_results_into_leaderboard(current_leaderboard_path, evaluation_resul
             "overall_f1": scores.get("overall_macro_f1", 0.0),
             "rare_f1": scores.get("rare_transitions_f1", 0.0),
             "timestamp": datetime.now().isoformat(),
+            "model_type": result.get("model_type", "unknown"),
+            "notes": result.get("notes", ""),
         }
         if team not in existing_map or entry["weighted_f1"] > existing_map[team]["weighted_f1"]:
             existing_map[team] = entry
