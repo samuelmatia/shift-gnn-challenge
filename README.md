@@ -195,8 +195,7 @@ python scoring_script.py submissions/challenge_submission.csv
 6. **Create a Pull Request** with your submission:
    - Add `challenge_submission.csv` and `metadata.json` in **`submissions/`**.
    - Your **leaderboard name** is your **GitHub username** (one entry per participant; you can update by pushing new commits).
-   - When a PR is opened: it is validated and scored; the score is posted as a comment.
-   - When the PR is merged: the leaderboard is updated automatically.
+   - When a PR is opened or updated: it is validated, scored, and the leaderboard is updated automatically. The score is posted as a comment on the PR.
 
 
 
