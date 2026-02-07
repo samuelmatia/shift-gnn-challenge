@@ -71,7 +71,8 @@ def generate_leaderboard():
             'weighted_f1': scores.get('weighted_f1', 0.0),
             'overall_f1': scores.get('overall_macro_f1', 0.0),
             'rare_f1': scores.get('rare_transitions_f1', 0.0),
-            'timestamp': datetime.now().isoformat()
+            'timestamp': datetime.now().isoformat(),
+            'model_type': result.get('model_type', 'unknown'),
         }
         
         # Update if better score or new team
@@ -141,8 +142,8 @@ def generate_html(leaderboard, html_path=None):
         .header {
             text-align: center;
             color: white;
-            margin-bottom: 40px;
-            padding: 30px 0;
+            margin-bottom: 24px;
+            padding: 20px 0;
             background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(10px);
             border-radius: 20px;
@@ -152,8 +153,8 @@ def generate_html(leaderboard, html_path=None):
         }
         
         .header h1 {
-            font-size: 3em;
-            margin-bottom: 15px;
+            font-size: 2.2em;
+            margin-bottom: 10px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -163,7 +164,7 @@ def generate_html(leaderboard, html_path=None):
         }
         
         .header p {
-            font-size: 1.3em;
+            font-size: 1em;
             opacity: 0.9;
             color: #e0e0e0;
         }
@@ -171,8 +172,8 @@ def generate_html(leaderboard, html_path=None):
         .last-updated {
             text-align: center;
             color: rgba(255, 255, 255, 0.7);
-            margin-bottom: 30px;
-            font-size: 0.95em;
+            margin-bottom: 20px;
+            font-size: 0.85em;
             animation: fadeIn 1s ease-out 0.3s both;
         }
         
@@ -200,10 +201,10 @@ def generate_html(leaderboard, html_path=None):
         }
         
         th {
-            padding: 20px;
+            padding: 12px 16px;
             text-align: left;
             font-weight: 600;
-            font-size: 0.95em;
+            font-size: 0.8em;
             text-transform: uppercase;
             letter-spacing: 1px;
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
@@ -230,13 +231,17 @@ def generate_html(leaderboard, html_path=None):
         }
         
         td {
-            padding: 18px 20px;
+            padding: 10px 16px;
+            font-size: 0.9em;
         }
         
         .rank {
             font-weight: bold;
-            font-size: 1.2em;
-            width: 80px;
+            font-size: 1em;
+            width: 67px;
+        }
+        th.rank {
+            font-size: 0.8em;
         }
         
         .rank-1 { 
@@ -246,15 +251,15 @@ def generate_html(leaderboard, html_path=None):
         .rank-3 { color: #e67e22; }
         
         .medal {
-            font-size: 1.5em;
-            margin-right: 8px;
+            font-size: 1.2em;
+            margin-right: 4px;
             display: inline-block;
         }
         
         .team-name {
             font-weight: 600;
             color: #2c3e50;
-            font-size: 1.1em;
+            font-size: 0.95em;
         }
         
         .score {
@@ -264,23 +269,97 @@ def generate_html(leaderboard, html_path=None):
         
         .primary-score {
             color: #27ae60;
-            font-size: 1.2em;
+            font-size: 1.05em;
             font-weight: 700;
         }
         
         .empty {
             text-align: center;
-            padding: 80px;
+            padding: 50px;
             color: #95a5a6;
-            font-size: 1.2em;
+            font-size: 1em;
+        }
+        
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 16px;
+            padding: 14px 18px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(12px);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+        }
+        
+        .search-wrapper {
+            display: flex;
+            align-items: center;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.08);
+            padding-left: 14px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .search-wrapper:focus-within {
+            border-color: rgba(102, 126, 234, 0.6);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+        }
+        .search-icon {
+            font-size: 1em;
+            opacity: 0.8;
+        }
+        .controls input[type="text"] {
+            padding: 8px 12px 8px 8px;
+            border: none;
+            background: transparent;
+            color: white;
+            font-size: 0.85em;
+            min-width: 140px;
+            outline: none;
+        }
+        .controls input[type="text"]::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+        
+        .controls select {
+            padding: 8px 14px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.08);
+            color: white;
+            font-size: 0.85em;
+            cursor: pointer;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .controls select:focus {
+            outline: none;
+            border-color: rgba(102, 126, 234, 0.6);
+        }
+        .controls select option {
+            background: #1a1f3a;
+            color: white;
+        }
+        
+        th.sortable {
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+        }
+        th.sortable:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+        th.sortable::after {
+            content: none;
         }
         
         .footer {
             text-align: center;
-            margin-top: 40px;
+            margin-top: 30px;
             color: rgba(255, 255, 255, 0.9);
-            font-size: 1.1em;
-            padding: 20px;
+            font-size: 0.95em;
+            padding: 16px;
             background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(10px);
             border-radius: 15px;
@@ -377,16 +456,27 @@ def generate_html(leaderboard, html_path=None):
         </div>
         <p class="last-updated">Last updated: """ + format_datetime(leaderboard.get("last_updated")) + """</p>
         
+        <div class="controls">
+            <span class="search-wrapper"><span class="search-icon">🔍</span><input type="text" id="search" placeholder="team" class="search-input"></span>
+            <select id="filter-model" class="filter-select">
+                <option value="">filter by model type</option>
+                <option value="human">Human</option>
+                <option value="llm">LLM</option>
+                <option value="human+llm">Human & LLM</option>
+            </select>
+        </div>
+        
         <div class="leaderboard">
-            <table>
+            <table id="leaderboard-table">
                 <thead>
                     <tr>
-                        <th class="rank">Rank</th>
-                        <th>Team</th>
-                        <th class="score primary-score">Weighted Macro-F1</th>
-                        <th class="score">Overall Macro-F1</th>
-                        <th class="score">Rare Transitions F1</th>
-                        <th>Submission Time</th>
+                        <th class="rank sortable" data-sort="rank">Rank</th>
+                        <th class="sortable" data-sort="team">Team</th>
+                        <th class="score primary-score sortable" data-sort="weighted_f1">Weighted Macro-F1</th>
+                        <th class="score sortable" data-sort="overall_f1">Overall Macro-F1</th>
+                        <th class="score sortable" data-sort="rare_f1">Rare Transitions F1</th>
+                        <th class="col-model sortable" data-sort="model_type">Model Type</th>
+                        <th class="sortable" data-sort="timestamp">Submission Time</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -394,7 +484,7 @@ def generate_html(leaderboard, html_path=None):
     
     if not leaderboard.get("submissions"):
         html += """                    <tr>
-                        <td colspan="6" class="empty">No submissions yet. Be the first! 🚀</td>
+                        <td colspan="7" class="empty">No submissions yet. Be the first! 🚀</td>
                     </tr>
 """
     else:
@@ -408,16 +498,17 @@ def generate_html(leaderboard, html_path=None):
             elif idx == 3:
                 medal = "🥉 "
             
-            timestamp = entry.get("timestamp", "")
-            if timestamp:
-                timestamp = format_datetime(timestamp)
+            ts_raw = entry.get("timestamp", "")
+            timestamp = format_datetime(ts_raw) if ts_raw else ""
+            model_type = entry.get("model_type", "unknown")
             
-            html += f"""                    <tr style="animation-delay: {idx * 0.1}s;">
+            html += f"""                    <tr data-team="{entry['team']}" data-model-type="{model_type}" data-timestamp="{ts_raw}" data-weighted-f1="{entry['weighted_f1']}" data-overall-f1="{entry['overall_f1']}" data-rare-f1="{entry['rare_f1']}" style="animation-delay: {idx * 0.1}s;">
                         <td class="rank {rank_class}"><span class="medal">{medal}</span>{idx}</td>
                         <td class="team-name">{entry['team']}</td>
                         <td class="score primary-score">{entry['weighted_f1']:.6f}</td>
                         <td class="score">{entry['overall_f1']:.6f}</td>
                         <td class="score">{entry['rare_f1']:.6f}</td>
+                        <td class="col-model">{model_type}</td>
                         <td>{timestamp}</td>
                     </tr>
 """
@@ -675,6 +766,59 @@ def generate_html(leaderboard, html_path=None):
         // Start animation
         animate();
     </script>
+    <script>
+        // Interactive leaderboard: search, filter by model type, sortable columns
+        (function() {
+            const searchEl = document.getElementById('search');
+            const filterModelEl = document.getElementById('filter-model');
+            const table = document.getElementById('leaderboard-table');
+            if (!table) return;
+            const rows = Array.from(table.querySelectorAll('tbody tr')).filter(r => !r.classList.contains('empty'));
+            const headers = table.querySelectorAll('th.sortable');
+
+            function applyFilters() {
+                const q = (searchEl?.value || '').toLowerCase();
+                const modelFilter = filterModelEl?.value || '';
+                rows.forEach((row, i) => {
+                    const team = (row.dataset.team || '').toLowerCase();
+                    const ts = (row.dataset.timestamp || '').toLowerCase();
+                    const modelType = row.dataset.modelType || 'unknown';
+                    const matchSearch = !q || team.includes(q) || ts.includes(q);
+                    const matchModel = !modelFilter || modelType === modelFilter || (modelFilter === 'human' && modelType === 'human+llm');
+                    row.style.display = (matchSearch && matchModel) ? '' : 'none';
+                });
+            }
+            function getVal(row, col) {
+                const map = { rank:1, team:2, weighted_f1:3, overall_f1:4, rare_f1:5, model_type:6, timestamp:7 };
+                const ds = { weighted_f1:'weightedF1', overall_f1:'overallF1', rare_f1:'rareF1', model_type:'modelType' };
+                if (ds[col] && row.dataset[ds[col]]) return row.dataset[ds[col]];
+                if (col === 'team') return row.dataset.team || '';
+                if (col === 'timestamp') return row.dataset.timestamp || '';
+                const idx = map[col]; return idx ? row.cells[idx-1]?.textContent?.trim() || '' : '';
+            }
+            function sortBy(col) {
+                const asc = table.dataset.sortDir === col ? table.dataset.sortAsc !== 'true' : col === 'weighted_f1' || col === 'rank';
+                table.dataset.sortDir = col;
+                table.dataset.sortAsc = asc ? 'true' : 'false';
+                const visible = rows.filter(r => r.style.display !== 'none').slice();
+                const numCols = ['rank','weighted_f1','overall_f1','rare_f1'];
+                visible.sort((a, b) => {
+                    let va = getVal(a, col), vb = getVal(b, col);
+                    if (numCols.includes(col)) {
+                        va = parseFloat(va) || 0; vb = parseFloat(vb) || 0;
+                        return asc ? va - vb : vb - va;
+                    }
+                    va = String(va).toLowerCase(); vb = String(vb).toLowerCase();
+                    return asc ? (va < vb ? -1 : va > vb ? 1 : 0) : (vb < va ? -1 : vb > va ? 1 : 0);
+                });
+                const tbody = table.querySelector('tbody');
+                visible.forEach(r => tbody.appendChild(r));
+            }
+            searchEl?.addEventListener('input', applyFilters);
+            filterModelEl?.addEventListener('change', applyFilters);
+            headers?.forEach(th => th.addEventListener('click', () => sortBy(th.dataset.sort)));
+        })();
+    </script>
 </body>
 </html>"""
     
@@ -719,6 +863,7 @@ def merge_pr_results_into_leaderboard(current_leaderboard_path, evaluation_resul
             "overall_f1": scores.get("overall_macro_f1", 0.0),
             "rare_f1": scores.get("rare_transitions_f1", 0.0),
             "timestamp": datetime.now().isoformat(),
+            "model_type": result.get("model_type", "unknown"),
         }
         if team not in existing_map or entry["weighted_f1"] > existing_map[team]["weighted_f1"]:
             existing_map[team] = entry
@@ -852,4 +997,4 @@ if __name__ == '__main__':
 
 
 
-#python3 scripts/generate_leaderboard.py --remove-team "team_sam_demo2"
+#python3 scripts/generate_leaderboard.py --remove-team "NOM_EXACT"

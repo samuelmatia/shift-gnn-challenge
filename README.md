@@ -17,6 +17,12 @@ The task is to predict **role transitions** - how a user's role evolves from one
 - **3 - Expert**: Highly active user who provides many answers (high out-degree)
 - **4 - Moderator**: Very active user who helps many different users (high activity, high unique recipients)
 
+Roles are assigned using a fixed heuristic based on user activity and interaction patterns (degrees, activity spans), and remain consistent across all temporal snapshots. They are not human-annotated ground truth, but deterministic proxy labels.
+
+### Formal Setup
+
+Let $G_t = (V, E_t)$ be the temporal interaction graph at time $t$. Each node $v \in V$ has a role $y_v^t \in \{0, \ldots, 4\}$. Given the interaction history $H_v^t$ of user $v$ up to time $t$, the task is to predict $y_v^{t+k}$ (the role at the next snapshot).
+
 ### What's Challenging ? 
 
 1. **Temporal Shift**: Training data comes from 2009-2013, validation from 2013-2014, and test from 2014-2016. The distribution of user behaviors and network patterns changes over time, making generalization challenging.
@@ -41,6 +47,8 @@ The dataset is based on the **Super User Stack Exchange temporal network** from 
 **Files available in `data/processed/` :**
 - `train.parquet` - Training set with labels 
 - `test_features.parquet` - Test set features without labels
+
+The provided features (`out_degree`, `in_degree`, etc.) are derived from the temporal graph structure. The challenge **requires graph neural networks (GNNs)** or graph-based models that exploit the full adjacency $E_t$; feature-only tabular models are not allowed.
 
 #### Column Descriptions
 
@@ -174,8 +182,9 @@ To ensure fair competition and focus on scalable GNN methods:
    789,6,1 
 ```
 
-**Put your submission in `submissions/` and name it exactly `challenge_submission.csv`.**  
-
+**Put your submission in `submissions/`** with:
+- `challenge_submission.csv` — your predictions
+- `metadata.json` — records whether produced by a **human**, **LLM**, or **both** (`model_type`: `human` | `llm` | `human+llm`, optional `notes`)
 
 5. **Score Your Submission**
 
@@ -184,9 +193,9 @@ python scoring_script.py submissions/challenge_submission.csv
 ```
 
 6. **Create a Pull Request** with your submission:
-   - Add **one** file in **`submissions/`** named **`challenge_submission.csv`**.
+   - Add `challenge_submission.csv` and `metadata.json` in **`submissions/`**.
    - Your **leaderboard name** is your **GitHub username** (one entry per participant; you can update by pushing new commits).
-   - A GitHub Action runs on the PR, evaluates your submission, posts your score as a comment, and updates the public leaderboard.
+   - When a PR is opened or updated: it is validated, scored, and the leaderboard is updated automatically. The score is posted as a comment on the PR.
 
 
 
@@ -195,12 +204,13 @@ python scoring_script.py submissions/challenge_submission.csv
 
 👉 **[View Live Leaderboard](https://samuelmatia.github.io/gnn-role-transition-challenge/leaderboard.html)**
 
-The leaderboard shows:
-- **Rank**: Your position based on Weighted Macro-F1 score
-- **Team Name**: GitHub username (for PR submissions) or submission filename (for direct pushes on main)
-- **Weighted Macro-F1**: Primary evaluation metric
-- **Overall Macro-F1**: Overall performance across all transitions
-- **Rare Transitions F1**: Performance on rare transitions (< 5% frequency)
+The interactive leaderboard shows:
+- **Rank**, **Team** (GitHub username), **Weighted Macro-F1** (primary metric), **Overall Macro-F1**, **Rare Transitions F1**
+- **Model Type**: human, llm, or human+llm (from `metadata.json`)
+- **Notes**: optional notes from metadata
+- **Submission Time**
+
+
 
 
 

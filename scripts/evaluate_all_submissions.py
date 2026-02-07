@@ -57,6 +57,7 @@ def main():
 
     # PR context: only challenge_submission.csv is considered (fixed filename)
     REQUIRED_PR_FILENAME = 'challenge_submission.csv'
+    metadata = {'model_type': 'unknown', 'notes': ''}
 
     if pr_team_name:
         submission_file = submissions_dir / REQUIRED_PR_FILENAME
@@ -67,8 +68,17 @@ def main():
             with open(results_file, 'w') as f:
                 json.dump([], f, indent=2)
             return
+        # Load metadata.json (model_type: human | llm | human+llm, notes: optional)
+        metadata = {'model_type': 'unknown', 'notes': ''}
+        metadata_file = submissions_dir / 'metadata.json'
+        if metadata_file.exists():
+            try:
+                with open(metadata_file, 'r') as f:
+                    metadata = json.load(f)
+            except json.JSONDecodeError:
+                pass
         csv_files = [submission_file]
-        print(f"PR mode: evaluating {REQUIRED_PR_FILENAME} (team = {pr_team_name})")
+        print(f"PR mode: evaluating {REQUIRED_PR_FILENAME} (team = {pr_team_name}, model_type = {metadata.get('model_type', 'unknown')})")
     else:
         # Main branch: evaluate all CSV files in submissions/
         csv_files = list(submissions_dir.glob('*.csv'))
@@ -88,11 +98,11 @@ def main():
 
         if scores:
             team_name = pr_team_name if pr_team_name else csv_file.stem
-            results.append({
-                'file': str(csv_file),
-                'team': team_name,
-                'scores': scores
-            })
+            entry = {'file': str(csv_file), 'team': team_name, 'scores': scores}
+            if pr_team_name:
+                entry['model_type'] = metadata.get('model_type', 'unknown')
+                entry['notes'] = metadata.get('notes', '')
+            results.append(entry)
             print(f"✓ Successfully evaluated {csv_file.name}")
         else:
             print(f"✗ Failed to evaluate {csv_file.name}")
