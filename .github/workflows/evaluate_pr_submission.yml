@@ -4,7 +4,8 @@ name: Evaluate PR Submission
 on:
   pull_request:
     paths:
-      - 'submissions/**/*.csv'   # submissions_examples/ changes do not trigger
+      - 'submissions/**/*.csv'
+      - 'submissions/metadata.json'
 
 concurrency:
   group: pr-eval-${{ github.event.pull_request.number }}
