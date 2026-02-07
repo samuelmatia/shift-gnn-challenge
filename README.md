@@ -8,7 +8,7 @@
 
 Welcome to the **SHIFT-GNN Challenge**! This competition focuses on predicting how user roles evolve over time in the Super User Stack Exchange temporal network.
 
-**[🏆 View SHIFT-GNN Leaderboard](https://samuelmatia.github.io/gnn-role-transition-challenge/leaderboard.html)**
+**[🏆 View SHIFT-GNN Leaderboard](https://samuelmatia.github.io/shift-gnn-challenge/leaderboard.html)**
 
 ### Problem Description
 
@@ -205,7 +205,7 @@ python scoring_script.py submissions/challenge_submission.csv
 
 ## 🏆 SHIFT-GNN Leaderboard
 
-👉 **[View SHIFT-GNN Leaderboard](https://samuelmatia.github.io/gnn-role-transition-challenge/leaderboard.html)**
+👉 **[View SHIFT-GNN Leaderboard](https://samuelmatia.github.io/shift-gnn-challenge/leaderboard.html)**
 
 The interactive leaderboard shows:
 - **Rank**, **Team** (GitHub username), **Weighted Macro-F1** (primary metric), **Overall Macro-F1**, **Rare Transitions F1**
