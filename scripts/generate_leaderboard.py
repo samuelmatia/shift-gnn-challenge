@@ -520,7 +520,7 @@ def generate_html(leaderboard, html_path=None):
         <div class="footer">
             <p>Submit your solution via Pull Request to appear on the leaderboard!</p>
             <p style="margin-top: 10px; font-size: 0.95em;">
-                <a href="https://github.com/samuelmatia/gnn-role-transition-challenge" 
+                <a href="https://github.com/samuelmatia/shift-gnn-challenge" 
                    target="_blank" 
                    rel="noopener noreferrer">
                     🔗 View Repository on GitHub
