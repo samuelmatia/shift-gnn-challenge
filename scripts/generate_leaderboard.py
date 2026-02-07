@@ -109,7 +109,7 @@ def generate_html(leaderboard, html_path=None):
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GNN Challenge - Leaderboard</title>
+    <title>SHIFT-GNN Leaderboard</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
@@ -451,8 +451,8 @@ def generate_html(leaderboard, html_path=None):
     
     <div class="container">
         <div class="header">
-            <h1>🏆 GNN Challenge Leaderboard</h1>
-            <p>Role Transition Prediction in Temporal Networks</p>
+            <h1>🏆 SHIFT-GNN Leaderboard</h1>
+            <p>Structural & Historical Inference of Functional role Transitions with GNNs</p>
         </div>
         <p class="last-updated">Last updated: """ + format_datetime(leaderboard.get("last_updated")) + """</p>
         
