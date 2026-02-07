@@ -167,7 +167,7 @@ def visualize_graph_sample(train_file='data/processed/train.parquet', output_fil
                           connectionstyle='arc3,rad=0.1')
     
     # Add title and labels
-    plt.title('GNN Challenge: Super User Stack Exchange Temporal Network\n'
+    plt.title('SHIFT-GNN: Super User Stack Exchange Temporal Network\n'
               f'Sample Snapshot (Snapshot ID: {sample_snapshot}, {len(G.nodes())} users)',
               fontsize=16, fontweight='bold', pad=20)
     

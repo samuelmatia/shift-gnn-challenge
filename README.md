@@ -1,10 +1,14 @@
-# GNN Challenge: Role Transition Prediction in Temporal Networks
+# SHIFT-GNN
+
+**Structural & Historical Inference of Functional role Transitions with GNNs**
+
+*Predicting role shifts in temporal networks*
 
 ## 🎯 Challenge Overview
 
-Welcome to the **Role Transition Prediction Challenge**! This competition focuses on predicting how user roles evolve over time in the Super User Stack Exchange temporal network.
+Welcome to the **SHIFT-GNN Challenge**! This competition focuses on predicting how user roles evolve over time in the Super User Stack Exchange temporal network.
 
-**[🏆 View Live Leaderboard](https://samuelmatia.github.io/gnn-role-transition-challenge/leaderboard.html)**
+**[🏆 View SHIFT-GNN Leaderboard](https://samuelmatia.github.io/gnn-role-transition-challenge/leaderboard.html)**
 
 ### Problem Description
 
@@ -199,10 +203,9 @@ python scoring_script.py submissions/challenge_submission.csv
 
 
 
-## 🏆 Leaderboard
+## 🏆 SHIFT-GNN Leaderboard
 
-
-👉 **[View Live Leaderboard](https://samuelmatia.github.io/gnn-role-transition-challenge/leaderboard.html)**
+👉 **[View SHIFT-GNN Leaderboard](https://samuelmatia.github.io/gnn-role-transition-challenge/leaderboard.html)**
 
 The interactive leaderboard shows:
 - **Rank**, **Team** (GitHub username), **Weighted Macro-F1** (primary metric), **Overall Macro-F1**, **Rare Transitions F1**
