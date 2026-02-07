@@ -211,7 +211,7 @@ The interactive leaderboard shows:
 - **Notes**: optional notes from metadata
 - **Submission Time**
 
-**Interactive features:** Free-text search (team, notes, date), filter by model type (human/llm/human+llm), sortable columns (default: score), toggle column visibility.
+
 
 
 
