@@ -49,63 +49,75 @@ The dataset is based on the **Super User Stack Exchange temporal network** from 
 - **Edge Types**: Answers to questions, comments to questions, comments to answers
 
 **Files available in `data/processed/` :**
-- `train.parquet` - Training set with labels 
-- `test_features.parquet` - Test set features without labels
+- `train.parquet` - Training set with labels (user_id, snapshot_id, current_role, next_role, timestamps)
+- `test_features.parquet` - Test set without labels (user_id, snapshot_id, current_role, timestamps)
+- `adjacency_all.parquet` - **Adjacency matrices A_t** (all edges with snapshot_id, COO sparse format) - **REQUIRED for GNN**
+- `node_features_all.parquet` - **Node features X** (all node features with snapshot_id) - **REQUIRED for GNN**
 
-The provided features (`out_degree`, `in_degree`, etc.) are derived from the temporal graph structure. The challenge **requires graph neural networks (GNNs)** or graph-based models that exploit the full adjacency $E_t$; feature-only tabular models are not allowed.
+**⚠️ IMPORTANT: GNN Requirement**
 
-#### Column Descriptions
+The challenge **requires graph neural networks (GNNs)**. The transition files (`train.parquet`, `test_features.parquet`) contain **only identifiers and roles** - no aggregated features. 
 
-#### train.parquet (16 columns)
-
-| Column Name | Type | Description |
-|-------------|------|-------------|
-| `user_id` | int64 | Unique user identifier |
-| `snapshot_id` | int64 | Temporal snapshot identifier (3-month windows) |
-| `current_role` | int64 | Current role (0-4) |
-| `next_role` | int64 | Next role to predict (target variable) |
-| `transition_label` | string | Transition label (e.g., "2->0") |
-| `snapshot_start` | datetime64[ns] | Start timestamp of current snapshot |
-| `snapshot_end` | datetime64[ns] | End timestamp of current snapshot |
-| `next_snapshot_start` | datetime64[ns] | Start timestamp of next snapshot |
-| `next_snapshot_end` | datetime64[ns] | End timestamp of next snapshot |
-| `out_degree` | int64 | Number of outgoing edges (answers/comments given) |
-| `in_degree` | int64 | Number of incoming edges (questions/comments received) |
-| `num_unique_recipients` | int64 | Number of unique users this user interacted with (outgoing) |
-| `num_unique_sources` | int64 | Number of unique users who interacted with this user (incoming) |
-| `total_interactions` | int64 | Total number of interactions in the snapshot |
-| `activity_span_days` | int64 | Number of days between first and last interaction |
-| `avg_interactions_per_day` | float64 | Average interactions per day (total_interactions / activity_span_days) |
-
-#### test_features.parquet (12 columns)
-
-Same structure as `train.parquet`, but **without** the following columns (labels are hidden):
--  `next_role` (to be predicted)
--  `transition_label` (to be predicted)
--  `next_snapshot_start` (future information)
--  `next_snapshot_end` (future information)
+**To build your model, you MUST:**
+1. Load `adjacency_all.parquet` to construct the graph structure A_t for each snapshot
+2. Load `node_features_all.parquet` to get node features X_t (or compute your own from the graph)
+3. Use GNN message passing to learn node representations from the graph structure
+4. Predict role transitions using the learned representations
 
 
-#### Example Data Row
 
+### Graph Specification
+
+**Adjacency Matrix A_t**: For each snapshot t, the adjacency matrix A_t is provided in sparse COO (Coordinate) format:
+- **File**: `data/processed/adjacency_all.parquet`
+- **Columns**: `snapshot_id`, `src` (source node), `dst` (destination node)
+- **Usage**: Filter rows where `snapshot_id == t` to get A_t for snapshot t
+- **Format**: Sparse COO format - can be converted to dense matrix or CSR/CSR format for GNN libraries (PyG, DGL)
+
+**Node Features X**: Each node v at snapshot t has a feature vector:
+- **File**: `data/processed/node_features_all.parquet`
+- **Columns**: `user_id`, `snapshot_id`, `out_degree`, `in_degree`, `num_unique_recipients`, `num_unique_sources`, `total_interactions`, `activity_span_days`, `avg_interactions_per_day`
+- **Usage**: Filter rows where `snapshot_id == t` to get X_t (node features matrix) for snapshot t
+- **Shape**: For snapshot t, X_t has shape [num_nodes, num_features]
+
+**Example usage (PyTorch Geometric)**:
 ```python
-{
-    'user_id': 34217,
-    'snapshot_id': 7,
-    'current_role': 2,           # Contributor
-    'next_role': 0,              # Inactive (to predict)
-    'transition_label': '2->0',  # Contributor -> Inactive
-    'snapshot_start': Timestamp('2008-08-02 04:32:45'),
-    'snapshot_end': Timestamp('2008-11-02 04:32:45'),
-    'out_degree': 2,
-    'in_degree': 2,
-    'num_unique_recipients': 2,
-    'num_unique_sources': 2,
-    'total_interactions': 4,
-    'activity_span_days': 51,
-    'avg_interactions_per_day': 0.078
-}
+import pandas as pd
+import torch
+from torch_geometric.data import Data
+
+# Load adjacency matrices
+adjacency = pd.read_parquet('data/processed/adjacency_all.parquet')
+A_t = adjacency[adjacency['snapshot_id'] == 0]  # Get A_0
+
+# Load node features
+node_features = pd.read_parquet('data/processed/node_features_all.parquet')
+X_t = node_features[node_features['snapshot_id'] == 0]  # Get X_0
+
+# Create edge index for PyG (COO format: [2, num_edges])
+edge_index = torch.tensor([
+    A_t['src'].values,
+    A_t['dst'].values
+], dtype=torch.long)
+
+# Create node features tensor
+x = torch.tensor(X_t[['out_degree', 'in_degree', ...]].values, dtype=torch.float)
+
+# Create PyG Data object
+graph = Data(x=x, edge_index=edge_index)
+# Now use this graph with your GNN model
 ```
+
+**Example usage (DGL)**:
+```python
+import pandas as pd
+import dgl
+import torch
+
+# Load and construct graph similarly
+# See starter_code/baseline_GraphSAGE+LSTM.py for a complete example
+```
+
 
 ### Graph Visualization
 
@@ -144,13 +156,17 @@ This metric:
 
 To ensure fair competition and focus on scalable GNN methods:
 
-1. **No External Data**  
+1. **GNN Required**  
+   - The transition files (`train.parquet`, `test_features.parquet`) contain **only identifiers and roles** - no aggregated features.
+   - You **MUST** use `adjacency_all.parquet` to construct graph structures and `node_features_all.parquet` for node features.
+
+2. **No External Data**  
    Only the provided graph and features may be used.
 
-2. **Graph Features Only**  
-   No handcrafted features or external embeddings are allowed.
+3. **Graph Features Only**  
+   No handcrafted features or external embeddings are allowed beyond what's provided in `node_features_all.parquet`.
 
-3. **Train on CPU Only**  
+4. **Train on CPU Only**  
    - Models must be trainable on a standard CPU environment.
    - Participants are encouraged to use **efficient training strategies** such as:
      - neighbor sampling 
@@ -165,9 +181,7 @@ To ensure fair competition and focus on scalable GNN methods:
 
 1. **Fork this repository** to your GitHub account.
 
-2. **Use the provided data**, located in `data/processed/`:
-   - `train.parquet`
-   - `test_features.parquet`
+2. **Use the provided data**, located in `data/processed/`
 
 3. **Build your model** using the starter code or your own implementation.
 

@@ -1,7 +1,8 @@
 # Data files (sensitive)
 data/private/
-
-
+data/raw_data/
+prepare_data.py
+scripts
 # Python
 __pycache__/
 *.py[cod]
