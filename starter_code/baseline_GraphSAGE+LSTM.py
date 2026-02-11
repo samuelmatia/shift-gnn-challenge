@@ -2,6 +2,16 @@
 Advanced baseline model for Role Transition Prediction challenge.
 Uses GraphSAGE (PyTorch Geometric) + LSTM to capture both graph structure and temporal dynamics.
 This should outperform the simple Random Forest baseline.
+
+This model uses:
+- adjacency_all.parquet: Graph structure (A_t) for each snapshot
+- node_features_all.parquet: Node features (X) for each snapshot
+- train.parquet: Training transitions (user_id, snapshot_id, current_role, next_role)
+
+The graph has been downsampled for computational affordability (< 3h CPU training):
+- Top 50,000 most active users
+- Maximum 20,000 edges per snapshot
+- Users with at least 2 interactions
 """
 
 import pandas as pd
@@ -26,7 +36,10 @@ torch.manual_seed(42)
 np.random.seed(42)
 
 class GraphSAGEModel(nn.Module):
-    """GraphSAGE model using PyTorch Geometric."""
+    """
+    GraphSAGE model using PyTorch Geometric.
+    Uses neighbor sampling for efficient training on large graphs.
+    """
     def __init__(self, in_feats, hidden_feats, out_feats, num_layers=2):
         super(GraphSAGEModel, self).__init__()
         self.layers = nn.ModuleList()
@@ -155,13 +168,13 @@ class TransitionDataset(Dataset):
             user_idx = 0
             # Use default features if user not in dict
             if user_id not in self.node_features_dict:
-                # Return zero features
-                features = np.zeros(8, dtype=np.float32)
+                # Return zero features (7 features: out_degree, in_degree, num_unique_recipients, num_unique_sources, total_interactions, activity_span_days, avg_interactions_per_day)
+                features = np.zeros(7, dtype=np.float32)
             else:
                 features = self.node_features_dict[user_id]
         else:
             user_idx = self.user_to_idx[user_id]
-            features = self.node_features_dict.get(user_id, np.zeros(8, dtype=np.float32))
+            features = self.node_features_dict.get(user_id, np.zeros(7, dtype=np.float32))
         
         current_role = row['current_role']
         # next_role may not exist in test_features.parquet
@@ -174,45 +187,45 @@ class TransitionDataset(Dataset):
             'features': features
         }
 
-def build_graph_from_transitions(transitions_df, max_edges_per_snapshot=1000):
+def build_graph_from_adjacency(user_to_idx, snapshot_id=None, max_edges=None):
     """
-    Build a PyTorch Geometric graph from transitions data.
-    Creates edges between users in the same snapshot, but limits to avoid memory issues.
-    """
-    # Get all unique users
-    all_users = set(transitions_df['user_id'].unique())
-    user_to_idx = {uid: idx for idx, uid in enumerate(sorted(all_users))}
-    idx_to_user = {idx: uid for uid, idx in user_to_idx.items()}
+    Build a PyTorch Geometric graph from adjacency_all.parquet.
+    Loads the actual graph structure instead of creating synthetic edges.
     
-    # Build edges from transitions (users who appear in same snapshot)
+    Args:
+        user_to_idx: Mapping from user_id to node index
+        snapshot_id: If provided, use edges from this snapshot only; otherwise use all snapshots
+        max_edges: Optional limit on number of edges (for memory efficiency)
+    """
+    adjacency_all = pd.read_parquet('./data/processed/adjacency_all.parquet')
+    
+    # Filter by snapshot if specified
+    if snapshot_id is not None:
+        adjacency = adjacency_all[adjacency_all['snapshot_id'] == snapshot_id].copy()
+    else:
+        adjacency = adjacency_all.copy()
+    
+    # Map user_ids to node indices
     edges = set()
-    
-    for snapshot_id in transitions_df['snapshot_id'].unique():
-        snapshot_users = transitions_df[transitions_df['snapshot_id'] == snapshot_id]['user_id'].unique()
-        snapshot_user_indices = [user_to_idx[uid] for uid in snapshot_users]
+    for _, row in adjacency.iterrows():
+        src_uid = row['src']
+        dst_uid = row['dst']
         
-        # Limit number of edges per snapshot to avoid memory issues
-        if len(snapshot_user_indices) > max_edges_per_snapshot:
-            sampled_indices = np.random.choice(snapshot_user_indices, 
-                                             size=max_edges_per_snapshot, 
-                                             replace=False)
-        else:
-            sampled_indices = snapshot_user_indices
-        
-        # Create edges between sampled users
-        for u1 in sampled_indices:
-            others = [u for u in sampled_indices if u != u1]
-            if len(others) > 0:
-                k = min(5, len(others))
-                neighbors = np.random.choice(others, size=k, replace=False)
-                for u2 in neighbors:
-                    edges.add((u1, u2))
-                    edges.add((u2, u1))  # Undirected
+        # Only include edges for users in our mapping
+        if src_uid in user_to_idx and dst_uid in user_to_idx:
+            src_idx = user_to_idx[src_uid]
+            dst_idx = user_to_idx[dst_uid]
+            edges.add((src_idx, dst_idx))
+            edges.add((dst_idx, src_idx))  # Undirected
     
     # Add self-loops for all nodes
     num_nodes = len(user_to_idx)
     for i in range(num_nodes):
         edges.add((i, i))
+    
+    # Limit edges if specified
+    if max_edges is not None and len(edges) > max_edges:
+        edges = set(list(edges)[:max_edges])
     
     if len(edges) == 0:
         # Fallback: create a simple graph with self-loops only
@@ -222,51 +235,43 @@ def build_graph_from_transitions(transitions_df, max_edges_per_snapshot=1000):
     src, dst = zip(*edges)
     edge_index = torch.tensor([list(src), list(dst)], dtype=torch.long)
     
+    idx_to_user = {idx: uid for uid, idx in user_to_idx.items()}
+    
     return edge_index, user_to_idx, idx_to_user
 
-def prepare_node_features(transitions_df, user_to_idx):
-    """Prepare node features from transitions data."""
-    # Aggregate features per user (use mean of features across all snapshots)
-    user_features = defaultdict(lambda: {
-        'out_degree': [],
-        'in_degree': [],
-        'num_unique_recipients': [],
-        'num_unique_sources': [],
-        'total_interactions': [],
-        'activity_span_days': [],
-        'avg_interactions_per_day': [],
-        'current_role': []
-    })
+def prepare_node_features(user_to_idx, snapshot_id=None):
+    """
+    Load node features from node_features_all.parquet.
+    If snapshot_id is provided, use features from that snapshot; otherwise use mean across all snapshots.
+    """
+    node_features_all = pd.read_parquet('./data/processed/node_features_all.parquet')
     
-    for _, row in transitions_df.iterrows():
-        uid = row['user_id']
-        user_features[uid]['out_degree'].append(row['out_degree'])
-        user_features[uid]['in_degree'].append(row['in_degree'])
-        user_features[uid]['num_unique_recipients'].append(row['num_unique_recipients'])
-        user_features[uid]['num_unique_sources'].append(row['num_unique_sources'])
-        user_features[uid]['total_interactions'].append(row['total_interactions'])
-        user_features[uid]['activity_span_days'].append(row['activity_span_days'])
-        user_features[uid]['avg_interactions_per_day'].append(row['avg_interactions_per_day'])
-        user_features[uid]['current_role'].append(row['current_role'])
+    # Filter by snapshot if specified
+    if snapshot_id is not None:
+        node_features = node_features_all[node_features_all['snapshot_id'] == snapshot_id].copy()
+    else:
+        node_features = node_features_all.copy()
     
-    # Compute mean features
+    # Aggregate features per user (use mean across snapshots)
+    feature_cols = ['out_degree', 'in_degree', 'num_unique_recipients', 'num_unique_sources',
+                    'total_interactions', 'activity_span_days', 'avg_interactions_per_day']
+    
+    user_features_agg = node_features.groupby('user_id')[feature_cols].mean().reset_index()
+    
+    # Create mapping: user_id -> feature vector
     node_features_dict = {}
     feature_matrix = []
     
     for uid in sorted(user_to_idx.keys()):
-        feats = user_features[uid]
-        mean_features = [
-            np.mean(feats['out_degree']),
-            np.mean(feats['in_degree']),
-            np.mean(feats['num_unique_recipients']),
-            np.mean(feats['num_unique_sources']),
-            np.mean(feats['total_interactions']),
-            np.mean(feats['activity_span_days']),
-            np.mean(feats['avg_interactions_per_day']),
-            np.mean(feats['current_role'])
-        ]
-        node_features_dict[uid] = np.array(mean_features, dtype=np.float32)
-        feature_matrix.append(mean_features)
+        user_feat = user_features_agg[user_features_agg['user_id'] == uid]
+        if len(user_feat) > 0:
+            features = user_feat[feature_cols].values[0].astype(np.float32)
+        else:
+            # Default features for users not in node_features
+            features = np.zeros(len(feature_cols), dtype=np.float32)
+        
+        node_features_dict[uid] = features
+        feature_matrix.append(features)
     
     feature_matrix = np.array(feature_matrix, dtype=np.float32)
     
@@ -296,34 +301,31 @@ def train_model():
     print(f"Train set: {len(train)} samples")
     print(f"Val set: {len(val)} samples")
     
-    # Build graph from train, but include all users from train+val for mapping
-    print("\nBuilding graph...")
-    # Combine train and val to get all unique users
-    all_transitions = pd.concat([train, val], ignore_index=True)
-    edge_index, user_to_idx, idx_to_user = build_graph_from_transitions(train)
+    # Build user mapping from train+val
+    print("\nBuilding user mapping...")
+    all_users = set(train['user_id'].unique()) | set(val['user_id'].unique())
+    user_to_idx = {uid: idx for idx, uid in enumerate(sorted(all_users))}
+    idx_to_user = {idx: uid for uid, idx in user_to_idx.items()}
     
-    # Add users from val that are not in train to the mapping
     train_users = set(train['user_id'].unique())
     val_users = set(val['user_id'].unique())
     new_users = val_users - train_users
     
-    # Add new users to mapping (they won't be in the graph, but we need the mapping)
-    max_idx = max(user_to_idx.values()) if user_to_idx else -1
-    for uid in sorted(new_users):
-        if uid not in user_to_idx:
-            max_idx += 1
-            user_to_idx[uid] = max_idx
-    
     num_nodes = len(user_to_idx)
-    print(f"Graph: {num_nodes} nodes ({len(train_users)} from train, {len(new_users)} new in val), {edge_index.shape[1]} edges")
+    print(f"Total users: {num_nodes} ({len(train_users)} from train, {len(new_users)} new in val)")
     
-    # Prepare node features (from train, but add defaults for new users)
-    print("Preparing node features...")
-    node_features_dict, feature_matrix = prepare_node_features(train, user_to_idx)
+    # Build graph from adjacency_all.parquet (REQUIRED for GNN)
+    print("Building graph from adjacency_all.parquet...")
+    edge_index, user_to_idx, idx_to_user = build_graph_from_adjacency(user_to_idx, snapshot_id=None)
+    print(f"Graph: {num_nodes} nodes, {edge_index.shape[1]} edges")
+    
+    # Prepare node features from node_features_all.parquet (REQUIRED for GNN)
+    print("Loading node features from node_features_all.parquet...")
+    node_features_dict, feature_matrix = prepare_node_features(user_to_idx, snapshot_id=None)
     
     # Add default features for new users in val
     if len(new_users) > 0:
-        default_features = np.mean(feature_matrix, axis=0) if len(feature_matrix) > 0 else np.zeros(8, dtype=np.float32)
+        default_features = np.mean(feature_matrix, axis=0) if len(feature_matrix) > 0 else np.zeros(7, dtype=np.float32)
         for uid in new_users:
             if uid not in node_features_dict:
                 node_features_dict[uid] = default_features
@@ -360,8 +362,11 @@ def train_model():
     train_dataset = TransitionDataset(train, user_to_idx, node_features_dict)
     val_dataset = TransitionDataset(val, user_to_idx, node_features_dict)
     
-    train_loader = DataLoader(train_dataset, batch_size=512, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=512, shuffle=False)
+    # Batch size optimized for downsample graph (50k nodes, ~20k edges/snapshot)
+    # Larger batch size = faster training, but requires more memory
+    batch_size = 512  # Good balance for CPU training
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
     
     # Initialize model
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -377,16 +382,17 @@ def train_model():
     edge_index = edge_index.to(device)
     feature_tensor = feature_tensor.to(device)
     
-    # Loss and optimizer (reduced learning rate to prevent NaN)
+    # Loss and optimizer
+    # Class weights to handle imbalanced classes (Inactive, Novice, Contributor, Expert, Moderator)
     class_weights = torch.tensor([0.1, 1.0, 1.0, 2.0, 3.0]).to(device)
     # Normalize weights to prevent extreme values
     class_weights = class_weights / class_weights.sum() * 5.0
     criterion = nn.CrossEntropyLoss(weight=class_weights)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=1e-4)  # Reduced LR
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=5)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-4)  # Standard LR for downsample graph
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=3)
     
     # Training loop
-    num_epochs = 1
+    num_epochs = 10  # Increased for better performance (should still be < 3h with downsample)
     best_val_f1 = 0.0
     
     print("\nTraining model...")
@@ -613,12 +619,15 @@ def train_model():
         if uid not in test_user_to_idx:
             test_user_to_idx[uid] = len(test_user_to_idx)
     
-    # Prepare test features (use mean features from train if user not seen)
-    test_node_features_dict = node_features_dict.copy()
+    # Prepare test features - load from node_features_all.parquet
+    print("Loading test node features from node_features_all.parquet...")
+    test_node_features_dict, _ = prepare_node_features(test_user_to_idx, snapshot_id=None)
+    
+    # Fill missing users with default features
     for uid in test_features['user_id'].unique():
         if uid not in test_node_features_dict:
-            # Use default features (mean of all users)
-            test_node_features_dict[uid] = np.mean(feature_matrix, axis=0)
+            # Use default features (mean of all users from train)
+            test_node_features_dict[uid] = np.mean(feature_matrix, axis=0) if len(feature_matrix) > 0 else np.zeros(7, dtype=np.float32)
     
     test_dataset = TransitionDataset(test_features, test_user_to_idx, test_node_features_dict)
     test_loader = DataLoader(test_dataset, batch_size=512, shuffle=False)
@@ -663,8 +672,8 @@ def train_model():
     })
     
     os.makedirs('./submissions', exist_ok=True)
-    submission.to_csv('./submissions/team_sam_GraphSAGE+LSTM_1epoch_training.csv', index=False)
-    print("Saved predictions to ./team_sam_GraphSAGE+LSTM_1epoch_training.csv")
+    submission.to_csv('./submissions/challenge_submission.csv', index=False)
+    print("Saved predictions to ./submissions/challenge_submission.csv")
     
     # Clean up model file
     if os.path.exists('best_model.pt'):
