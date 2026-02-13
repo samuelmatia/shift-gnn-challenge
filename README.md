@@ -10,6 +10,8 @@ Welcome to the **SHIFT-GNN Challenge**! This competition focuses on predicting h
 
 **[🏆 View SHIFT-GNN Leaderboard](https://samuelmatia.github.io/shift-gnn-challenge/leaderboard.html)**
 
+**[👉 Submit Your Solution](https://docs.google.com/forms/d/e/1FAIpQLScIvsMOmkAv5KFxz57GBiGBqo37SwHSVIrxQ92drUxp35jLCw/viewform)**
+
 ### Problem Description
 
 The task is to predict **role transitions** - how a user's role evolves from one temporal snapshot to the next. Given a user's current role and their interaction history up to time `t`, predict their role at time `t+k`.
@@ -51,12 +53,11 @@ The dataset is based on the **Super User Stack Exchange temporal network** from 
 **Files available in `data/processed/` :**
 - `train.parquet` - Training set with labels (user_id, snapshot_id, current_role, next_role, timestamps)
 - `test_features.parquet` - Test set without labels (user_id, snapshot_id, current_role, timestamps)
-- `adjacency_all.parquet` - **Adjacency matrices A_t** (all edges with snapshot_id, COO sparse format) - **REQUIRED for GNN**
-- `node_features_all.parquet` - **Node features X** (all node features with snapshot_id) - **REQUIRED for GNN**
+- `adjacency_all.parquet` - **Adjacency matrices A_t** (all edges with snapshot_id, COO sparse format) 
+- `node_features_all.parquet` - **Node features X** (all node features with snapshot_id) 
 
-**⚠️ IMPORTANT: GNN Requirement**
+The challenge **requires graph neural networks (GNNs)**
 
-The challenge **requires graph neural networks (GNNs)**. The transition files (`train.parquet`, `test_features.parquet`) contain **only identifiers and roles** - no aggregated features. 
 
 **To build your model, you MUST:**
 1. Load `adjacency_all.parquet` to construct the graph structure A_t for each snapshot
@@ -68,17 +69,8 @@ The challenge **requires graph neural networks (GNNs)**. The transition files (`
 
 ### Graph Specification
 
-**Adjacency Matrix A_t**: For each snapshot t, the adjacency matrix A_t is provided in sparse COO (Coordinate) format:
-- **File**: `data/processed/adjacency_all.parquet`
-- **Columns**: `snapshot_id`, `src` (source node), `dst` (destination node)
-- **Usage**: Filter rows where `snapshot_id == t` to get A_t for snapshot t
-- **Format**: Sparse COO format - can be converted to dense matrix or CSR/CSR format for GNN libraries (PyG, DGL)
-
-**Node Features X**: Each node v at snapshot t has a feature vector:
-- **File**: `data/processed/node_features_all.parquet`
-- **Columns**: `user_id`, `snapshot_id`, `out_degree`, `in_degree`, `num_unique_recipients`, `num_unique_sources`, `total_interactions`, `activity_span_days`, `avg_interactions_per_day`
-- **Usage**: Filter rows where `snapshot_id == t` to get X_t (node features matrix) for snapshot t
-- **Shape**: For snapshot t, X_t has shape [num_nodes, num_features]
+**Adjacency Matrix A_t**: For each snapshot t, the adjacency matrix A_t is provided in sparse COO (Coordinate) format.
+**Node Features X**: Each node v at snapshot t has a feature vector.
 
 **Example usage (PyTorch Geometric)**:
 ```python
@@ -106,16 +98,6 @@ x = torch.tensor(X_t[['out_degree', 'in_degree', ...]].values, dtype=torch.float
 # Create PyG Data object
 graph = Data(x=x, edge_index=edge_index)
 # Now use this graph with your GNN model
-```
-
-**Example usage (DGL)**:
-```python
-import pandas as pd
-import dgl
-import torch
-
-# Load and construct graph similarly
-# See starter_code/baseline_GraphSAGE+LSTM.py for a complete example
 ```
 
 
@@ -149,7 +131,6 @@ This metric:
 **Additional metrics reported:**
 - Overall Macro-F1 (unweighted)
 - Rare Transitions Macro-F1 (transitions occurring in < 5% of cases)
-- Per-transition F1 scores
 
 
 ## 📋 Constraints
@@ -157,16 +138,11 @@ This metric:
 To ensure fair competition and focus on scalable GNN methods:
 
 1. **GNN Required**  
-   - The transition files (`train.parquet`, `test_features.parquet`) contain **only identifiers and roles** - no aggregated features.
-   - You **MUST** use `adjacency_all.parquet` to construct graph structures and `node_features_all.parquet` for node features.
 
 2. **No External Data**  
    Only the provided graph and features may be used.
 
-3. **Graph Features Only**  
-   No handcrafted features or external embeddings are allowed beyond what's provided in `node_features_all.parquet`.
-
-4. **Train on CPU Only**  
+3. **Train on CPU Only**  
    - Models must be trainable on a standard CPU environment.
    - Participants are encouraged to use **efficient training strategies** such as:
      - neighbor sampling 
@@ -175,73 +151,82 @@ To ensure fair competition and focus on scalable GNN methods:
    - Full-batch training on the entire graph is discouraged if it leads to excessive computation time or memory usage.
 
 5. **One Submission Per Participant**  
-   Only one submission attempt per participant is allowed and is enforced. Your first valid submission is recorded on the leaderboard; any later PR is evaluated for your information but does not update your score.
 
 
 ## 🤝 How to Submit
 
 ### Submission Process
 
-1. **Fork this repository** to your GitHub account.
+1. **Clone or download this repository** to access the data and starter code.
 
 2. **Use the provided data**, located in `data/processed/`
 
-3. **Build your model** using the starter code or your own implementation.
+3. **Build your model** using the starter code (`starter_code/`) or your own implementation.
 
-4. **Generate predictions** for the test set and save them as a CSV file with the required format:
+4. **Generate predictions** for the test set:
 
-   **Required columns:**
-   - `user_id`: User identifier  
-   - `snapshot_id`: Snapshot identifier  
-   - `predicted_role`: Predicted next role (integer values from 0 to 4)
+   **Test data file**: `data/processed/test_features.parquet`
+   - Contains: `user_id`, `snapshot_id`, `current_role`, `timestamps`
+   - **No labels** - this is what you need to predict!
+   - Your model should predict `next_role` for each `(user_id, snapshot_id)` pair in this file
+   
+   **Prediction process:**
+   - Load `test_features.parquet` to get the test instances
+   - For each `(user_id, snapshot_id)` pair, predict the `next_role`
+   - Save predictions as a CSV file with the required format
 
-   **Example submission:**
+   **Required CSV format:**
+   - **Columns**: `user_id`, `snapshot_id`, `predicted_role`
+   - `user_id`: User identifier (must match `user_id` from `test_features.parquet`)
+   - `snapshot_id`: Snapshot identifier (must match `snapshot_id` from `test_features.parquet`)
+   - `predicted_role`: Predicted next role (integer values: 0, 1, 2, 3, or 4)
+
+   **Example submission (`challenge_submission.csv`):**
 ```csv
-   user_id,snapshot_id,predicted_role
-   123,5,2
-   456,5,3
-   789,6,1 
+user_id,snapshot_id,predicted_role
+123,5,2
+456,5,3
+789,6,1
 ```
 
-**Put your submission in `submissions/`** with:
-- `challenge_submission.csv` — your predictions
-- `metadata.json` — records whether produced by a **human**, **LLM**, or **both** (`model_type`: `human` | `llm` | `human+llm`, optional `notes`)
+   **File requirements:**
+   - Filename: `challenge_submission.csv` (or any name ending in `.csv`)
+   - Format: CSV with UTF-8 encoding
+   - Size: Maximum 100 MB
+   - All three columns must be present: `user_id`, `snapshot_id`, `predicted_role`
+   - Must include predictions for **all** `(user_id, snapshot_id)` pairs in `test_features.parquet`
+
+
 
 5. **Submit via Google Form**
 
-   **🔒 Private Submissions**: To keep submissions private, submit your file via the Google Form:
+   **🔒 Private Submissions**: To keep submissions private and ensure fair competition, submit your file via the Google Form:
    
-   **[👉 Submit Your Solution](LINK_TO_YOUR_GOOGLE_FORM)** *(Replace with your actual Google Form link)*
+   **[👉 Submit Your Solution](https://docs.google.com/forms/d/e/1FAIpQLScIvsMOmkAv5KFxz57GBiGBqo37SwHSVIrxQ92drUxp35jLCw/viewform)**
    
-   **Required information:**
-   - **Team Name**: Your team/participant name (will appear on leaderboard)
-   - **Model Type**: `human`, `llm`, or `human+llm`
-   - **Submission File**: Upload your `challenge_submission.csv` file
+   **Required information in the form:**
+   - **Team Name** ⭐: Your team/participant name (will appear on the public leaderboard)
+   - **Model Type** ⭐: Select one:
+     - `human` - Model developed entirely by human(s)
+     - `llm` - Model developed using LLM assistance (e.g., ChatGPT, Claude, etc.)
+     - `human+llm` - Collaborative development between human(s) and LLM(s)
+   - **Submission File** ⭐: Upload your `challenge_submission.csv` file (max 100 MB)
    
-   **Important:**
-   - ✅ Only **one submission per participant** is allowed (enforced by Google Form)
-   - ✅ Your CSV file must have columns: `user_id`, `snapshot_id`, `predicted_role`
-   - ✅ Submissions are processed periodically and scores appear on the public leaderboard
-   - ✅ **Your CSV file remains private** - only scores and ranks are displayed publicly
+   **Important notes:**
+   - Only **one submission per participant** is allowed (enforced automatically by the system)
+   - Your CSV file must have exactly these columns: `user_id`, `snapshot_id`, `predicted_role`
+   - File format: CSV with UTF-8 encoding
+   - Make sure your predictions are integers from 0 to 4 (valid role values)
 
-6. **Check Your Score**
+7. **Check Your Score**
 
-   After submission, your score will appear on the [leaderboard](leaderboard.html) within a few hours (or immediately if processed manually). Only your **team name**, **scores**, and **rank** are displayed publicly - your submission file is never visible to other participants.
-
+   After submission, your score will appear on the [leaderboard](https://samuelmatia.github.io/shift-gnn-challenge/leaderboard.html) **within 1-2 minutes** automatically. Only your **team name**, **scores**, and **rank** are displayed publicly - your submission file is never visible to other participants.
+   
 
 
 ## 🏆 SHIFT-GNN Leaderboard
 
 👉 **[View SHIFT-GNN Leaderboard](https://samuelmatia.github.io/shift-gnn-challenge/leaderboard.html)**
-
-The interactive leaderboard shows:
-- **Rank**, **Team** (GitHub username), **Weighted Macro-F1** (primary metric), **Overall Macro-F1**, **Rare Transitions F1**
-- **Model Type**: human, llm, or human+llm (from `metadata.json`)
-- **Notes**: optional notes from metadata
-- **Submission Time**
-
-
-
 
 
 ## 📚 References
