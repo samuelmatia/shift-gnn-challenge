@@ -325,25 +325,6 @@ def generate_html(leaderboard, html_path=None):
             font-weight: 600;
             color: #2c3e50;
             font-size: 0.95em;
-            min-width: 180px;
-            width: 180px;
-        }
-        
-        th[data-sort="team"] {
-            min-width: 180px;
-            width: 180px;
-        }
-        
-        th[data-sort="timestamp"] {
-            min-width: 160px;
-            width: 160px;
-            font-size: 0.75em;
-        }
-        
-        td.timestamp-cell {
-            font-size: 0.85em;
-            min-width: 160px;
-            width: 160px;
         }
         
         .score {
@@ -649,7 +630,7 @@ def generate_html(leaderboard, html_path=None):
                         <td class="score score-overall" style="--fill-percent: {overall_fill}%;"><span>{overall_pct:.1f}%</span></td>
                         <td class="score score-rare" style="--fill-percent: {rare_fill}%;"><span>{rare_pct:.1f}%</span></td>
                         <td class="col-model">{model_type}</td>
-                        <td class="timestamp-cell">{timestamp}</td>
+                        <td>{timestamp}</td>
                     </tr>
 """
     
