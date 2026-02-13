@@ -207,17 +207,26 @@ To ensure fair competition and focus on scalable GNN methods:
 - `challenge_submission.csv` — your predictions
 - `metadata.json` — records whether produced by a **human**, **LLM**, or **both** (`model_type`: `human` | `llm` | `human+llm`, optional `notes`)
 
-5. **Score Your Submission**
+5. **Submit via Google Form**
 
-```bash
-python scoring_script.py submissions/challenge_submission.csv
-```
+   **🔒 Private Submissions**: To keep submissions private, submit your file via the Google Form:
+   
+   **[👉 Submit Your Solution](LINK_TO_YOUR_GOOGLE_FORM)** *(Replace with your actual Google Form link)*
+   
+   **Required information:**
+   - **Team Name**: Your team/participant name (will appear on leaderboard)
+   - **Model Type**: `human`, `llm`, or `human+llm`
+   - **Submission File**: Upload your `challenge_submission.csv` file
+   
+   **Important:**
+   - ✅ Only **one submission per participant** is allowed (enforced by Google Form)
+   - ✅ Your CSV file must have columns: `user_id`, `snapshot_id`, `predicted_role`
+   - ✅ Submissions are processed periodically and scores appear on the public leaderboard
+   - ✅ **Your CSV file remains private** - only scores and ranks are displayed publicly
 
-6. **Create a Pull Request** with your submission:
-   - Add `challenge_submission.csv` and `metadata.json` in **`submissions/`**.
-   - Your **leaderboard name** is your **GitHub username**.
-   - **Only one submission per participant is allowed.** Your first valid submission is the one that counts; any later PR from you will be evaluated for feedback but **will not** update the leaderboard.
-   - When a PR is opened or updated: it is validated, scored, and (if it is your first submission) the leaderboard is updated automatically. The score is posted as a comment on the PR.
+6. **Check Your Score**
+
+   After submission, your score will appear on the [leaderboard](leaderboard.html) within a few hours (or immediately if processed manually). Only your **team name**, **scores**, and **rank** are displayed publicly - your submission file is never visible to other participants.
 
 
 

@@ -1,0 +1,49 @@
+name: Process Google Form Submissions (Polling)
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'  # Toutes les 5 minutes
+  workflow_dispatch:  # Déclenchement manuel
+
+jobs:
+  process:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      
+      - name: Install dependencies
+        run: |
+          pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib
+          pip install pandas pyarrow scikit-learn
+      
+      - name: Download private test data
+        env:
+          PRIVATE_DATA_METHOD: ${{ secrets.PRIVATE_DATA_METHOD || 'url' }}
+          PRIVATE_DATA_URL: ${{ secrets.PRIVATE_DATA_URL }}
+          PRIVATE_DATA_TOKEN: ${{ secrets.PRIVATE_DATA_TOKEN }}
+          GOOGLE_DRIVE_FILE_ID: ${{ secrets.GOOGLE_DRIVE_FILE_ID }}
+          GOOGLE_DRIVE_ACCESS_TOKEN: ${{ secrets.GOOGLE_DRIVE_ACCESS_TOKEN }}
+        run: |
+          mkdir -p data/private
+          python scripts/download_private_data.py || echo "Private data not available"
+      
+      - name: Process Google Form submissions and push leaderboard
+        env:
+          GOOGLE_SHEETS_ID: ${{ secrets.GOOGLE_SHEETS_ID }}
+          GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+        run: |
+          # Configure git for commits
+          git config user.name "Leaderboard Bot"
+          git config user.email "action@github.com"
+          
+          # Process submissions and push leaderboard
+          python scripts/process_google_form_submissions.py \
+            --sheets-id "$GOOGLE_SHEETS_ID" \
+            --sheet-name "Feuille1" \
+            --push || echo "No new submissions or error occurred"

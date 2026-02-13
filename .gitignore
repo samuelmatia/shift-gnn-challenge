@@ -3,6 +3,17 @@ data/private/
 data/raw_data/
 prepare_data.py
 scripts
+
+# Google API credentials (NEVER commit these!)
+*.json
+!package.json
+!tsconfig.json
+!*.config.json
+# But specifically ignore service account keys
+*service-account*.json
+*credentials*.json
+shift-gnn-challenge-*.json
+.processed_submissions.json
 # Python
 __pycache__/
 *.py[cod]
