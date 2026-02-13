@@ -1,5 +1,0 @@
-{
-  "model_type": "human",
-  "notes": "Optional notes about your submission",
-  "_model_type_options": ["human", "llm", "human+llm"]
-}

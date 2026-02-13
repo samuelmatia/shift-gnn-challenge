@@ -9,6 +9,7 @@ scripts
 !scripts/generate_leaderboard.py
 !scripts/download_private_data.py
 
+prepare__data.py
 # Google API credentials (NEVER commit these!)
 *.json
 !package.json
