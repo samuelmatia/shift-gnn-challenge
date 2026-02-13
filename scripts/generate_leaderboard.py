@@ -259,6 +259,13 @@ def generate_html(leaderboard, html_path=None):
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
         
+        th.score {
+            width: 140px;
+            min-width: 140px;
+            max-width: 140px;
+            text-align: center;
+        }
+        
         tbody tr {
             border-bottom: 2px solid rgba(255, 255, 255, 0.15);
             transition: all 0.3s ease;
@@ -328,6 +335,9 @@ def generate_html(leaderboard, html_path=None):
             margin-right: 20px;
             border: 2px solid rgba(255, 255, 255, 0.3);
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            width: 140px;
+            min-width: 140px;
+            max-width: 140px;
         }
         
         .score:last-of-type {
@@ -567,7 +577,7 @@ def generate_html(leaderboard, html_path=None):
                     <tr>
                         <th class="rank sortable" data-sort="rank">Rank</th>
                         <th class="sortable" data-sort="team">Team</th>
-                        <th class="score primary-score sortable" data-sort="weighted_f1">Weighted Macro-F1 ↓</th>
+                        <th class="score primary-score sortable" data-sort="weighted_f1">Weighted Macro-F1 <span style="color: #f39c12; font-size: 1.2em; font-weight: bold; text-shadow: 0 0 8px rgba(243, 156, 18, 0.6);">↓</span></th>
                         <th class="score sortable" data-sort="overall_f1">Overall Macro-F1</th>
                         <th class="score sortable" data-sort="rare_f1">Rare Transitions F1</th>
                         <th class="col-model sortable" data-sort="model_type">Model Type</th>
