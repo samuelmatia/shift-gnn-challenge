@@ -4,26 +4,76 @@ This script is used by GitHub Actions to access test labels.
 """
 import os
 import sys
+import json
 from pathlib import Path
 
-def download_from_google_drive(file_id, output_path, access_token=None):
+def download_from_google_drive(file_id, output_path, access_token=None, credentials_json=None):
     """Download file from Google Drive using file ID."""
     try:
-        import requests
+        # Method 1: Using Google API with Service Account credentials
+        if credentials_json:
+            try:
+                from google.oauth2 import service_account
+                from googleapiclient.discovery import build
+                from googleapiclient.http import MediaIoBaseDownload
+                import io
+                
+                # Parse credentials JSON
+                if isinstance(credentials_json, str):
+                    creds_dict = json.loads(credentials_json)
+                else:
+                    creds_dict = credentials_json
+                
+                # Create credentials from service account
+                credentials = service_account.Credentials.from_service_account_info(
+                    creds_dict,
+                    scopes=['https://www.googleapis.com/auth/drive.readonly']
+                )
+                
+                # Build Drive API service
+                service = build('drive', 'v3', credentials=credentials)
+                
+                # Ensure output directory exists
+                os.makedirs(os.path.dirname(output_path), exist_ok=True)
+                
+                # Download file
+                request = service.files().get_media(fileId=file_id)
+                fh = io.FileIO(output_path, 'wb')
+                downloader = MediaIoBaseDownload(fh, request)
+                done = False
+                while done is False:
+                    status, done = downloader.next_chunk()
+                    if status:
+                        print(f"Download progress: {int(status.progress() * 100)}%")
+                
+                print(f"Successfully downloaded from Google Drive using Service Account")
+                return True
+            except ImportError:
+                print("Google API libraries not installed. Install with:")
+                print("  pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib")
+            except Exception as e:
+                print(f"Error using Service Account credentials: {e}")
         
-        # Method 1: Direct download with access token
-        if access_token:
-            url = f"https://www.googleapis.com/drive/v3/files/{file_id}?alt=media"
-            headers = {"Authorization": f"Bearer {access_token}"}
-            response = requests.get(url, headers=headers, stream=True)
-            response.raise_for_status()
+        # Method 2: Direct download with access token
+        try:
+            import requests
             
-            with open(output_path, 'wb') as f:
-                for chunk in response.iter_content(chunk_size=8192):
-                    f.write(chunk)
-            return True
+            if access_token:
+                url = f"https://www.googleapis.com/drive/v3/files/{file_id}?alt=media"
+                headers = {"Authorization": f"Bearer {access_token}"}
+                response = requests.get(url, headers=headers, stream=True)
+                response.raise_for_status()
+                
+                with open(output_path, 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        f.write(chunk)
+                return True
+        except ImportError:
+            print("requests not installed. Install with: pip install requests")
+        except Exception as e:
+            print(f"Error downloading with access token: {e}")
         
-        # Method 2: Using gdown (if installed)
+        # Method 3: Using gdown (if installed)
         try:
             import gdown
             url = f"https://drive.google.com/uc?id={file_id}"
@@ -31,7 +81,10 @@ def download_from_google_drive(file_id, output_path, access_token=None):
             return True
         except ImportError:
             print("gdown not installed. Install with: pip install gdown")
-            return False
+        except Exception as e:
+            print(f"Error using gdown: {e}")
+        
+        return False
             
     except Exception as e:
         print(f"Error downloading from Google Drive: {e}")
@@ -97,12 +150,13 @@ def main():
     if method == 'google_drive':
         file_id = os.getenv('GOOGLE_DRIVE_FILE_ID')
         access_token = os.getenv('GOOGLE_DRIVE_ACCESS_TOKEN')
+        credentials_json = os.getenv('GOOGLE_CREDENTIALS_JSON')
         
         if not file_id:
             print("ERROR: GOOGLE_DRIVE_FILE_ID environment variable not set")
             sys.exit(1)
         
-        success = download_from_google_drive(file_id, str(output_path), access_token)
+        success = download_from_google_drive(file_id, str(output_path), access_token, credentials_json)
     
     elif method == 'url':
         url = os.getenv('PRIVATE_DATA_URL')

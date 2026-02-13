@@ -20,18 +20,19 @@ jobs:
       - name: Install dependencies
         run: |
           pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib
-          pip install pandas pyarrow scikit-learn
+          pip install pandas pyarrow scikit-learn requests
       
       - name: Download private test data
         env:
-          PRIVATE_DATA_METHOD: ${{ secrets.PRIVATE_DATA_METHOD || 'url' }}
+          PRIVATE_DATA_METHOD: ${{ secrets.PRIVATE_DATA_METHOD || 'google_drive' }}
           PRIVATE_DATA_URL: ${{ secrets.PRIVATE_DATA_URL }}
           PRIVATE_DATA_TOKEN: ${{ secrets.PRIVATE_DATA_TOKEN }}
           GOOGLE_DRIVE_FILE_ID: ${{ secrets.GOOGLE_DRIVE_FILE_ID }}
           GOOGLE_DRIVE_ACCESS_TOKEN: ${{ secrets.GOOGLE_DRIVE_ACCESS_TOKEN }}
+          GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
         run: |
           mkdir -p data/private
-          python scripts/download_private_data.py || echo "Private data not available"
+          python scripts/download_private_data.py || (echo "ERROR: Failed to download private test data" && exit 1)
       
       - name: Process Google Form submissions and push leaderboard
         env:
