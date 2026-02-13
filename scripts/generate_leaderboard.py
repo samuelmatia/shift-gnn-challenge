@@ -39,6 +39,46 @@ def load_existing_leaderboard():
             return json.load(f)
     return {"last_updated": None, "submissions": []}
 
+def assign_kaggle_ranks(submissions, score_key='weighted_f1', reverse=True):
+    """
+    Assign ranks following Kaggle guidelines: tied scores share the same rank.
+    Example: [0.9, 0.9, 0.8] -> ranks [1, 1, 3] (not [1, 2, 3])
+    
+    Args:
+        submissions: List of submission dicts (must be sorted by score)
+        score_key: Key to use for ranking (default: 'weighted_f1')
+        reverse: If True, higher scores = better (default: True)
+    
+    Returns:
+        List of submissions with 'rank' field added
+    """
+    if not submissions:
+        return []
+    
+    ranked = []
+    current_rank = 1
+    prev_score = None
+    
+    for entry in submissions:
+        score = entry.get(score_key, 0.0)
+        
+        # If score differs from previous, update rank
+        if prev_score is not None:
+            if reverse:
+                if score < prev_score:
+                    current_rank = len(ranked) + 1
+            else:
+                if score > prev_score:
+                    current_rank = len(ranked) + 1
+        
+        entry_with_rank = entry.copy()
+        entry_with_rank['rank'] = current_rank
+        ranked.append(entry_with_rank)
+        
+        prev_score = score
+    
+    return ranked
+
 def generate_leaderboard():
     """Generate leaderboard from all results."""
     results = load_evaluation_results()
@@ -46,9 +86,14 @@ def generate_leaderboard():
     
     # If no evaluation results (e.g. all failed), keep existing leaderboard and only refresh timestamp
     if not results and existing.get('submissions'):
+        subs = existing['submissions']
+        # Ensure ranks are assigned (in case old leaderboard doesn't have ranks)
+        if not all('rank' in s for s in subs):
+            subs.sort(key=lambda x: x.get('weighted_f1', 0.0), reverse=True)
+            subs = assign_kaggle_ranks(subs, score_key='weighted_f1', reverse=True)
         leaderboard = {
             'last_updated': datetime.now().isoformat(),
-            'submissions': existing['submissions']
+            'submissions': subs
         }
         leaderboard_file = Path(__file__).parent.parent / 'leaderboard.json'
         with open(leaderboard_file, 'w') as f:
@@ -82,6 +127,9 @@ def generate_leaderboard():
     # Convert to list and sort
     submissions = list(existing_map.values())
     submissions.sort(key=lambda x: x['weighted_f1'], reverse=True)
+    
+    # Assign Kaggle-style ranks (tied scores share the same rank)
+    submissions = assign_kaggle_ranks(submissions, score_key='weighted_f1', reverse=True)
     
     leaderboard = {
         'last_updated': datetime.now().isoformat(),
@@ -488,26 +536,27 @@ def generate_html(leaderboard, html_path=None):
                     </tr>
 """
     else:
-        for idx, entry in enumerate(leaderboard["submissions"], 1):
-            rank_class = f"rank-{idx}" if idx <= 3 else ""
+        for idx, entry in enumerate(leaderboard["submissions"]):
+            rank = entry.get('rank', idx + 1)  # Use stored rank, fallback to idx+1 for backward compatibility
+            rank_class = f"rank-{rank}" if rank <= 3 else ""
             medal = ""
-            if idx == 1:
+            if rank == 1:
                 medal = "🥇 "
-            elif idx == 2:
+            elif rank == 2:
                 medal = "🥈 "
-            elif idx == 3:
+            elif rank == 3:
                 medal = "🥉 "
             
             ts_raw = entry.get("timestamp", "")
             timestamp = format_datetime(ts_raw) if ts_raw else ""
             model_type = entry.get("model_type", "unknown")
             
-            html += f"""                    <tr data-team="{entry['team']}" data-model-type="{model_type}" data-timestamp="{ts_raw}" data-weighted-f1="{entry['weighted_f1']}" data-overall-f1="{entry['overall_f1']}" data-rare-f1="{entry['rare_f1']}" style="animation-delay: {idx * 0.1}s;">
-                        <td class="rank {rank_class}"><span class="medal">{medal}</span>{idx}</td>
+            html += f"""                    <tr data-team="{entry['team']}" data-model-type="{model_type}" data-timestamp="{ts_raw}" data-weighted-f1="{entry['weighted_f1']}" data-overall-f1="{entry['overall_f1']}" data-rare-f1="{entry['rare_f1']}" data-rank="{rank}" style="animation-delay: {idx * 0.1}s;">
+                        <td class="rank {rank_class}"><span class="medal">{medal}</span>{rank}</td>
                         <td class="team-name">{entry['team']}</td>
-                        <td class="score primary-score">{entry['weighted_f1']:.6f}</td>
-                        <td class="score">{entry['overall_f1']:.6f}</td>
-                        <td class="score">{entry['rare_f1']:.6f}</td>
+                        <td class="score primary-score">{entry['weighted_f1']:.2f}</td>
+                        <td class="score">{entry['overall_f1']:.2f}</td>
+                        <td class="score">{entry['rare_f1']:.2f}</td>
                         <td class="col-model">{model_type}</td>
                         <td>{timestamp}</td>
                     </tr>
@@ -790,7 +839,7 @@ def generate_html(leaderboard, html_path=None):
             }
             function getVal(row, col) {
                 const map = { rank:1, team:2, weighted_f1:3, overall_f1:4, rare_f1:5, model_type:6, timestamp:7 };
-                const ds = { weighted_f1:'weightedF1', overall_f1:'overallF1', rare_f1:'rareF1', model_type:'modelType' };
+                const ds = { weighted_f1:'weightedF1', overall_f1:'overallF1', rare_f1:'rareF1', model_type:'modelType', rank:'rank' };
                 if (ds[col] && row.dataset[ds[col]]) return row.dataset[ds[col]];
                 if (col === 'team') return row.dataset.team || '';
                 if (col === 'timestamp') return row.dataset.timestamp || '';
@@ -832,6 +881,7 @@ def merge_pr_results_into_leaderboard(current_leaderboard_path, evaluation_resul
     """
     Merge PR evaluation results into the current leaderboard and write leaderboard.json + leaderboard.html.
     Used when a PR is evaluated: merge the PR's scores into main's leaderboard without re-evaluating all submissions.
+    Submission policy: only one submission per participant — if the team is already on the leaderboard, do not update.
     """
     output_dir = Path(output_dir) if output_dir else Path(__file__).parent.parent
     current_path = Path(current_leaderboard_path)
@@ -853,6 +903,7 @@ def merge_pr_results_into_leaderboard(current_leaderboard_path, evaluation_resul
             existing = json.load(f)
 
     existing_map = {sub["team"]: sub for sub in existing.get("submissions", [])}
+    pr_submission_status = []  # list of {team, accepted} for workflow comment
     for result in results:
         team = result["team"]
         scores = result.get("scores", {})
@@ -865,10 +916,16 @@ def merge_pr_results_into_leaderboard(current_leaderboard_path, evaluation_resul
             "timestamp": datetime.now().isoformat(),
             "model_type": result.get("model_type", "unknown"),
         }
-        if team not in existing_map or entry["weighted_f1"] > existing_map[team]["weighted_f1"]:
+        # Only one submission per participant: add only if team not already on leaderboard
+        if team not in existing_map:
             existing_map[team] = entry
+            pr_submission_status.append({"team": team, "accepted": True})
+        else:
+            pr_submission_status.append({"team": team, "accepted": False})
 
     submissions = sorted(existing_map.values(), key=lambda x: x["weighted_f1"], reverse=True)
+    # Assign Kaggle-style ranks (tied scores share the same rank)
+    submissions = assign_kaggle_ranks(submissions, score_key='weighted_f1', reverse=True)
     leaderboard = {
         "last_updated": datetime.now().isoformat(),
         "submissions": submissions,
@@ -877,6 +934,10 @@ def merge_pr_results_into_leaderboard(current_leaderboard_path, evaluation_resul
     with open(out_json, "w") as f:
         json.dump(leaderboard, f, indent=2)
     generate_html(leaderboard, html_path=output_dir / "leaderboard.html")
+    # Write status for workflow (one submission per participant: was this PR's submission accepted?)
+    status_path = output_dir / ".pr_submission_status.json"
+    with open(status_path, "w") as f:
+        json.dump(pr_submission_status, f, indent=2)
     print(f"Merged PR results into leaderboard ({len(submissions)} teams), wrote {out_json}")
     return leaderboard
 
@@ -891,6 +952,9 @@ def filter_leaderboard_to_allowed_teams(leaderboard_path, allowed_teams, output_
     with open(leaderboard_path, 'r') as f:
         leaderboard = json.load(f)
     subs = [s for s in leaderboard.get('submissions', []) if s['team'] in allowed]
+    # Re-sort and reassign ranks after filtering
+    subs.sort(key=lambda x: x.get('weighted_f1', 0.0), reverse=True)
+    subs = assign_kaggle_ranks(subs, score_key='weighted_f1', reverse=True)
     leaderboard['submissions'] = subs
     leaderboard['last_updated'] = datetime.now().isoformat()
     out_json = output_dir / 'leaderboard.json'
@@ -937,8 +1001,12 @@ def remove_teams_from_leaderboard(team_names, leaderboard_path=None):
         leaderboard = json.load(f)
     to_remove = set(team_names)
     before = len(leaderboard.get('submissions', []))
-    leaderboard['submissions'] = [s for s in leaderboard.get('submissions', []) if s['team'] not in to_remove]
-    removed = before - len(leaderboard['submissions'])
+    subs = [s for s in leaderboard.get('submissions', []) if s['team'] not in to_remove]
+    # Re-sort and reassign ranks after removal
+    subs.sort(key=lambda x: x.get('weighted_f1', 0.0), reverse=True)
+    subs = assign_kaggle_ranks(subs, score_key='weighted_f1', reverse=True)
+    leaderboard['submissions'] = subs
+    removed = before - len(subs)
     leaderboard['last_updated'] = datetime.now().isoformat()
     with open(path, 'w') as f:
         json.dump(leaderboard, f, indent=2)

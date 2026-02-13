@@ -174,6 +174,9 @@ To ensure fair competition and focus on scalable GNN methods:
      - memory-efficient message passing
    - Full-batch training on the entire graph is discouraged if it leads to excessive computation time or memory usage.
 
+5. **One Submission Per Participant**  
+   Only one submission attempt per participant is allowed and is enforced. Your first valid submission is recorded on the leaderboard; any later PR is evaluated for your information but does not update your score.
+
 
 ## 🤝 How to Submit
 
@@ -212,8 +215,9 @@ python scoring_script.py submissions/challenge_submission.csv
 
 6. **Create a Pull Request** with your submission:
    - Add `challenge_submission.csv` and `metadata.json` in **`submissions/`**.
-   - Your **leaderboard name** is your **GitHub username** (one entry per participant; you can update by pushing new commits).
-   - When a PR is opened or updated: it is validated, scored, and the leaderboard is updated automatically. The score is posted as a comment on the PR.
+   - Your **leaderboard name** is your **GitHub username**.
+   - **Only one submission per participant is allowed.** Your first valid submission is the one that counts; any later PR from you will be evaluated for feedback but **will not** update the leaderboard.
+   - When a PR is opened or updated: it is validated, scored, and (if it is your first submission) the leaderboard is updated automatically. The score is posted as a comment on the PR.
 
 
 
