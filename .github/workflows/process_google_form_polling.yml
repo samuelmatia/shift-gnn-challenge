@@ -2,8 +2,10 @@ name: Process Google Form Submissions (Polling)
 
 on:
   schedule:
-    - cron: '*/5 * * * *'  # Toutes les 5 minutes
-  workflow_dispatch:  # Déclenchement manuel
+    - cron: '*/15 * * * *'  # Every 15 minutes (more reliable than 5 min)
+  workflow_dispatch:  # Manual trigger
+  repository_dispatch:  # Allow external triggers (for webhooks)
+    types: [process-submissions]
 
 jobs:
   process:
