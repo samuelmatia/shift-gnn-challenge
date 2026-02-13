@@ -383,15 +383,29 @@ def push_leaderboard_to_repo(repo_path=None, remote='origin', branch='main'):
                        f'Update leaderboard from Google Form submissions [{datetime.now().strftime("%Y-%m-%d %H:%M")}]'],
                       cwd=repo_path, check=True)
         
-        # Push
-        subprocess.run(['git', 'push', remote, branch], 
-                      cwd=repo_path, check=True)
+        # Push with better error handling
+        push_result = subprocess.run(['git', 'push', remote, branch], 
+                                    cwd=repo_path, capture_output=True, text=True)
+        
+        if push_result.returncode != 0:
+            print(f"Error pushing to repo:")
+            print(f"  stdout: {push_result.stdout}")
+            print(f"  stderr: {push_result.stderr}")
+            print(f"  returncode: {push_result.returncode}")
+            # Try to get more info about git config
+            subprocess.run(['git', 'remote', '-v'], cwd=repo_path)
+            subprocess.run(['git', 'config', '--list'], cwd=repo_path)
+            return False
         
         print("✓ Leaderboard pushed successfully")
         return True
         
     except subprocess.CalledProcessError as e:
         print(f"Error pushing to repo: {e}")
+        if hasattr(e, 'stderr') and e.stderr:
+            print(f"  stderr: {e.stderr}")
+        if hasattr(e, 'stdout') and e.stdout:
+            print(f"  stdout: {e.stdout}")
         return False
 
 
