@@ -266,6 +266,11 @@ def generate_html(leaderboard, html_path=None):
             text-align: center;
         }
         
+        th.primary-score {
+            color: #f39c12;
+            font-weight: 700;
+        }
+        
         tbody tr {
             border-bottom: 2px solid rgba(255, 255, 255, 0.15);
             transition: all 0.3s ease;
