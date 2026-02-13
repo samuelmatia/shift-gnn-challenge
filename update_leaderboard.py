@@ -379,9 +379,9 @@ def generate_html_leaderboard(leaderboard):
             html += f"""                    <tr style="animation-delay: {idx * 0.1}s;">
                         <td class="rank {rank_class}"><span class="medal">{medal}</span>{idx}</td>
                         <td class="team-name">{entry['team']}</td>
-                        <td class="score primary-score">{entry['weighted_f1']:.6f}</td>
-                        <td class="score">{entry['overall_f1']:.6f}</td>
-                        <td class="score">{entry['rare_f1']:.6f}</td>
+                        <td class="score primary-score">{entry['weighted_f1'] * 100:.1f}%</td>
+                        <td class="score">{entry['overall_f1'] * 100:.1f}%</td>
+                        <td class="score">{entry['rare_f1'] * 100:.1f}%</td>
                         <td>{timestamp}</td>
                     </tr>
 """

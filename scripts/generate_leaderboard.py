@@ -312,11 +312,16 @@ def generate_html(leaderboard, html_path=None):
         
         .score {
             font-family: 'Courier New', monospace;
-            font-weight: bold;
+            font-weight: 600;
+            position: relative;
+            padding: 8px 12px !important;
+            border-radius: 4px;
+            text-align: center;
+            color: #fff;
+            font-size: 0.95em;
         }
         
         .primary-score {
-            color: #27ae60;
             font-size: 1.05em;
             font-weight: 700;
         }
@@ -551,12 +556,40 @@ def generate_html(leaderboard, html_path=None):
             timestamp = format_datetime(ts_raw) if ts_raw else ""
             model_type = entry.get("model_type", "unknown")
             
+            # Convert scores to percentages with 1 decimal
+            weighted_pct = entry['weighted_f1'] * 100
+            overall_pct = entry['overall_f1'] * 100
+            rare_pct = entry['rare_f1'] * 100
+            
+            # Calculate background colors for gauge effect
+            # Purple gradient for Weighted F1 and Overall F1 (0-100% -> light to dark purple)
+            def get_purple_color(pct):
+                pct = max(0, min(100, pct))  # Clamp 0-100
+                # Light purple (rgb(200, 180, 255)) to dark purple (rgb(100, 50, 150))
+                r = int(200 - (pct / 100) * 100)
+                g = int(180 - (pct / 100) * 130)
+                b = int(255 - (pct / 100) * 105)
+                return f"rgb({r}, {g}, {b})"
+            
+            # Red/pink gradient for Rare F1 (0-100% -> light pink to dark red)
+            def get_red_color(pct):
+                pct = max(0, min(100, pct))  # Clamp 0-100
+                # Light pink (rgb(255, 200, 220)) to dark red (rgb(150, 30, 50))
+                r = int(255 - (pct / 100) * 105)
+                g = int(200 - (pct / 100) * 170)
+                b = int(220 - (pct / 100) * 170)
+                return f"rgb({r}, {g}, {b})"
+            
+            weighted_bg = get_purple_color(weighted_pct)
+            overall_bg = get_purple_color(overall_pct)
+            rare_bg = get_red_color(rare_pct)
+            
             html += f"""                    <tr data-team="{entry['team']}" data-model-type="{model_type}" data-timestamp="{ts_raw}" data-weighted-f1="{entry['weighted_f1']}" data-overall-f1="{entry['overall_f1']}" data-rare-f1="{entry['rare_f1']}" data-rank="{rank}" style="animation-delay: {idx * 0.1}s;">
                         <td class="rank {rank_class}"><span class="medal">{medal}</span>{rank}</td>
                         <td class="team-name">{entry['team']}</td>
-                        <td class="score primary-score">{entry['weighted_f1']:.2f}</td>
-                        <td class="score">{entry['overall_f1']:.2f}</td>
-                        <td class="score">{entry['rare_f1']:.2f}</td>
+                        <td class="score primary-score" style="background-color: {weighted_bg};">{weighted_pct:.1f}%</td>
+                        <td class="score" style="background-color: {overall_bg};">{overall_pct:.1f}%</td>
+                        <td class="score" style="background-color: {rare_bg};">{rare_pct:.1f}%</td>
                         <td class="col-model">{model_type}</td>
                         <td>{timestamp}</td>
                     </tr>
@@ -843,7 +876,16 @@ def generate_html(leaderboard, html_path=None):
                 if (ds[col] && row.dataset[ds[col]]) return row.dataset[ds[col]];
                 if (col === 'team') return row.dataset.team || '';
                 if (col === 'timestamp') return row.dataset.timestamp || '';
-                const idx = map[col]; return idx ? row.cells[idx-1]?.textContent?.trim() || '' : '';
+                const idx = map[col];
+                if (idx) {
+                    const text = row.cells[idx-1]?.textContent?.trim() || '';
+                    // Handle percentage format: "47.0%" -> 47.0
+                    if (text.endsWith('%')) {
+                        return parseFloat(text.replace('%', '')) || 0;
+                    }
+                    return text;
+                }
+                return '';
             }
             function sortBy(col) {
                 const asc = table.dataset.sortDir === col ? table.dataset.sortAsc !== 'true' : col === 'weighted_f1' || col === 'rank';
