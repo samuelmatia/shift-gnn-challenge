@@ -20,6 +20,7 @@ import os
 import json
 import sys
 import subprocess
+import re
 from pathlib import Path
 from datetime import datetime
 import pandas as pd
@@ -284,7 +285,11 @@ def process_submissions_from_google_form(
             continue
         
         # Download CSV file
-        csv_filename = f"{team_name}_{timestamp.replace(' ', '_').replace(':', '-')}.csv"
+        # Sanitize filename: replace spaces, colons, slashes, and other invalid characters
+        safe_timestamp = timestamp.replace(' ', '_').replace(':', '-').replace('/', '-').replace('\\', '-')
+        # Also sanitize team name to remove any invalid characters
+        safe_team_name = re.sub(r'[<>:"/\\|?*]', '_', team_name).strip()
+        csv_filename = f"{safe_team_name}_{safe_timestamp}.csv"
         csv_path = submissions_path / csv_filename
         
         try:
