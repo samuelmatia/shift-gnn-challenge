@@ -84,7 +84,7 @@
         table {
             width: 100%;
             border-collapse: separate;
-            border-spacing: 0 6px;
+            border-spacing: 0 10px;
         }
         
         thead {
@@ -171,7 +171,9 @@
             font-size: 0.95em;
             overflow: hidden;
             background-color: rgba(0, 0, 0, 0.1);
-            margin-right: 12px;
+            margin-right: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
         
         .score:last-of-type {
@@ -411,7 +413,7 @@
                     <tr>
                         <th class="rank sortable" data-sort="rank">Rank</th>
                         <th class="sortable" data-sort="team">Team</th>
-                        <th class="score primary-score sortable" data-sort="weighted_f1">Weighted Macro-F1</th>
+                        <th class="score primary-score sortable" data-sort="weighted_f1">Weighted Macro-F1 ↓</th>
                         <th class="score sortable" data-sort="overall_f1">Overall Macro-F1</th>
                         <th class="score sortable" data-sort="rare_f1">Rare Transitions F1</th>
                         <th class="col-model sortable" data-sort="model_type">Model Type</th>
