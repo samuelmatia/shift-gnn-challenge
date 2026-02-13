@@ -28,6 +28,7 @@ Thumbs.db
 
 # Evaluation artifacts (generated in CI, not committed)
 evaluation_results.json
+.pr_submission_status.json
 results/
 
 # Leaderboard data (will be generated, but we need to commit them for GitHub Pages)

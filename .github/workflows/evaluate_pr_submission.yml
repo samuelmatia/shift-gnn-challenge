@@ -71,9 +71,18 @@ jobs:
             cp leaderboard.html /tmp/leaderboard.html
             echo "merged=true" >> $GITHUB_OUTPUT
           fi
+          if [ -f .pr_submission_status.json ]; then
+            if grep -q '"accepted": true' .pr_submission_status.json; then
+              echo "submission_accepted=true" >> $GITHUB_OUTPUT
+            else
+              echo "submission_accepted=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "submission_accepted=true" >> $GITHUB_OUTPUT
+          fi
 
       - name: Push leaderboard to main
-        if: env.PR_EVAL_SKIP != '1' && steps.merge.outputs.merged == 'true'
+        if: env.PR_EVAL_SKIP != '1' && steps.merge.outputs.merged == 'true' && steps.merge.outputs.submission_accepted == 'true'
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
@@ -90,6 +99,8 @@ jobs:
 
       - name: Post evaluation comment
         uses: actions/github-script@v7
+        env:
+          PR_TEAM_NAME: ${{ github.event.pull_request.user.login }}
         with:
           script: |
             const fs = require('fs');
@@ -110,9 +121,20 @@ jobs:
                 body += '|------|-------------------|------------------|---------------------|\n';
                 for (const x of data) {
                   const s = x.scores || {};
-                  body += `| ${x.team} | ${(s.weighted_f1 ?? 0).toFixed(6)} | ${(s.overall_macro_f1 ?? 0).toFixed(6)} | ${(s.rare_transitions_f1 ?? 0).toFixed(6)} |\n`;
+                  body += `| ${x.team} | ${(s.weighted_f1 ?? 0).toFixed(2)} | ${(s.overall_macro_f1 ?? 0).toFixed(2)} | ${(s.rare_transitions_f1 ?? 0).toFixed(2)} |\n`;
                 }
-                body += '\n✅ The public leaderboard has been updated with this submission.';
+                let accepted = true;
+                if (fs.existsSync('.pr_submission_status.json')) {
+                  const status = JSON.parse(fs.readFileSync('.pr_submission_status.json', 'utf8'));
+                  const prTeam = process.env.PR_TEAM_NAME || '';
+                  const entry = status.find(s => s.team === prTeam);
+                  if (entry && entry.accepted === false) accepted = false;
+                }
+                if (accepted) {
+                  body += '\n✅ The public leaderboard has been updated with this submission.';
+                } else {
+                  body += '\n⚠️ **Only one submission per participant is allowed.** You have already submitted; this run was evaluated for your information but **was not** added to the leaderboard.';
+                }
               }
             } else {
               body += 'No evaluation results (run may have failed). Check workflow logs.\n\n';
