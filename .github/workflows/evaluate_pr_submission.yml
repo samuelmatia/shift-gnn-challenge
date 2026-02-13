@@ -121,7 +121,7 @@ jobs:
                 body += '|------|-------------------|------------------|---------------------|\n';
                 for (const x of data) {
                   const s = x.scores || {};
-                  body += `| ${x.team} | ${(s.weighted_f1 ?? 0).toFixed(2)} | ${(s.overall_macro_f1 ?? 0).toFixed(2)} | ${(s.rare_transitions_f1 ?? 0).toFixed(2)} |\n`;
+                  body += `| ${x.team} | ${((s.weighted_f1 ?? 0) * 100).toFixed(1)}% | ${((s.overall_macro_f1 ?? 0) * 100).toFixed(1)}% | ${((s.rare_transitions_f1 ?? 0) * 100).toFixed(1)}% |\n`;
                 }
                 let accepted = true;
                 if (fs.existsSync('.pr_submission_status.json')) {
