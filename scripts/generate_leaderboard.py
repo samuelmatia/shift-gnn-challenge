@@ -317,13 +317,43 @@ def generate_html(leaderboard, html_path=None):
             padding: 8px 12px !important;
             border-radius: 4px;
             text-align: center;
-            color: #fff;
             font-size: 0.95em;
+            overflow: hidden;
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+        
+        .score::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: var(--fill-percent, 0%);
+            z-index: 0;
+            transition: width 0.3s ease;
+        }
+        
+        .score > span {
+            position: relative;
+            z-index: 1;
+            color: #2c3e50;
+            font-weight: 700;
         }
         
         .primary-score {
             font-size: 1.05em;
-            font-weight: 700;
+        }
+        
+        .primary-score::before {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .score-overall::before {
+            background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+        }
+        
+        .score-rare::before {
+            background: linear-gradient(90deg, #fa709a 0%, #fee140 100%);
         }
         
         .empty {
@@ -561,35 +591,17 @@ def generate_html(leaderboard, html_path=None):
             overall_pct = entry['overall_f1'] * 100
             rare_pct = entry['rare_f1'] * 100
             
-            # Calculate background colors for gauge effect
-            # Purple gradient for Weighted F1 and Overall F1 (0-100% -> light to dark purple)
-            def get_purple_color(pct):
-                pct = max(0, min(100, pct))  # Clamp 0-100
-                # Light purple (rgb(200, 180, 255)) to dark purple (rgb(100, 50, 150))
-                r = int(200 - (pct / 100) * 100)
-                g = int(180 - (pct / 100) * 130)
-                b = int(255 - (pct / 100) * 105)
-                return f"rgb({r}, {g}, {b})"
-            
-            # Red/pink gradient for Rare F1 (0-100% -> light pink to dark red)
-            def get_red_color(pct):
-                pct = max(0, min(100, pct))  # Clamp 0-100
-                # Light pink (rgb(255, 200, 220)) to dark red (rgb(150, 30, 50))
-                r = int(255 - (pct / 100) * 105)
-                g = int(200 - (pct / 100) * 170)
-                b = int(220 - (pct / 100) * 170)
-                return f"rgb({r}, {g}, {b})"
-            
-            weighted_bg = get_purple_color(weighted_pct)
-            overall_bg = get_purple_color(overall_pct)
-            rare_bg = get_red_color(rare_pct)
+            # Clamp percentages to 0-100 for gauge fill (rounded to 1 decimal)
+            weighted_fill = round(max(0, min(100, weighted_pct)), 1)
+            overall_fill = round(max(0, min(100, overall_pct)), 1)
+            rare_fill = round(max(0, min(100, rare_pct)), 1)
             
             html += f"""                    <tr data-team="{entry['team']}" data-model-type="{model_type}" data-timestamp="{ts_raw}" data-weighted-f1="{entry['weighted_f1']}" data-overall-f1="{entry['overall_f1']}" data-rare-f1="{entry['rare_f1']}" data-rank="{rank}" style="animation-delay: {idx * 0.1}s;">
                         <td class="rank {rank_class}"><span class="medal">{medal}</span>{rank}</td>
                         <td class="team-name">{entry['team']}</td>
-                        <td class="score primary-score" style="background-color: {weighted_bg};">{weighted_pct:.1f}%</td>
-                        <td class="score" style="background-color: {overall_bg};">{overall_pct:.1f}%</td>
-                        <td class="score" style="background-color: {rare_bg};">{rare_pct:.1f}%</td>
+                        <td class="score primary-score" style="--fill-percent: {weighted_fill}%;"><span>{weighted_pct:.1f}%</span></td>
+                        <td class="score score-overall" style="--fill-percent: {overall_fill}%;"><span>{overall_pct:.1f}%</span></td>
+                        <td class="score score-rare" style="--fill-percent: {rare_fill}%;"><span>{rare_pct:.1f}%</span></td>
                         <td class="col-model">{model_type}</td>
                         <td>{timestamp}</td>
                     </tr>
