@@ -237,7 +237,8 @@ def generate_html(leaderboard, html_path=None):
         
         table {
             width: 100%;
-            border-collapse: collapse;
+            border-collapse: separate;
+            border-spacing: 0 6px;
         }
         
         thead {
@@ -259,9 +260,13 @@ def generate_html(leaderboard, html_path=None):
         }
         
         tbody tr {
-            border-bottom: 1px solid #ecf0f1;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.15);
             transition: all 0.3s ease;
             animation: fadeInRow 0.5s ease-out both;
+        }
+        
+        tbody tr + tr {
+            margin-top: 4px;
         }
         
         tbody tr:nth-child(even) {
@@ -279,7 +284,7 @@ def generate_html(leaderboard, html_path=None):
         }
         
         td {
-            padding: 10px 16px;
+            padding: 14px 16px;
             font-size: 0.9em;
         }
         
@@ -320,6 +325,11 @@ def generate_html(leaderboard, html_path=None):
             font-size: 0.95em;
             overflow: hidden;
             background-color: rgba(0, 0, 0, 0.1);
+            margin-right: 12px;
+        }
+        
+        .score:last-of-type {
+            margin-right: 0;
         }
         
         .score::before {
