@@ -3,6 +3,11 @@ data/private/
 data/raw_data/
 prepare_data.py
 scripts
+# But allow scripts needed for CI/CD
+!scripts/process_google_form_submissions.py
+!scripts/evaluate_all_submissions.py
+!scripts/generate_leaderboard.py
+!scripts/download_private_data.py
 
 # Google API credentials (NEVER commit these!)
 *.json
