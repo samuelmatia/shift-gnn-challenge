@@ -220,7 +220,7 @@ user_id,snapshot_id,predicted_role
 
 7. **Check Your Score**
 
-   After submission, your score will appear on the [leaderboard](https://samuelmatia.github.io/shift-gnn-challenge/leaderboard.html) **within 1-2 minutes** automatically. Only your **team name**, **scores**, and **rank** are displayed publicly - your submission file is never visible to other participants.
+   After submission, your score will appear on the [leaderboard](https://samuelmatia.github.io/shift-gnn-challenge/leaderboard.html) automatically. Only your **team name**, **scores**, and **rank** are displayed publicly - your submission file is never visible to other participants.
    
 
 
