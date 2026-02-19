@@ -52,7 +52,12 @@ The dataset is based on the **Super User Stack Exchange temporal network** from 
 
 **Files available in `data/processed/` :**
 - `train.parquet` - Training set with labels (user_id, snapshot_id, current_role, next_role, timestamps)
+  - **Size**: 490,957 samples
+  - **Time period**: 2009-2013
 - `test_features.parquet` - Test set without labels (user_id, snapshot_id, current_role, timestamps)
+  - **Size**: 186,158 samples
+  - **Time period**: 2014-2016
+  - **⚠️ This is what you need to predict!**
 - `adjacency_all.parquet` - **Adjacency matrices A_t** (all edges with snapshot_id, COO sparse format) 
 - `node_features_all.parquet` - **Node features X** (all node features with snapshot_id) 
 
@@ -167,6 +172,7 @@ To ensure fair competition and focus on scalable GNN methods:
 
    **Test data file**: `data/processed/test_features.parquet`
    - Contains: `user_id`, `snapshot_id`, `current_role`, `timestamps`
+   - **Size**: 186,158 samples (you must predict `next_role` for all of them)
    - **No labels** - this is what you need to predict!
    - Your model should predict `next_role` for each `(user_id, snapshot_id)` pair in this file
    
@@ -194,7 +200,8 @@ user_id,snapshot_id,predicted_role
    - Format: CSV with UTF-8 encoding
    - Size: Maximum 100 MB
    - All three columns must be present: `user_id`, `snapshot_id`, `predicted_role`
-   - Must include predictions for **all** `(user_id, snapshot_id)` pairs in `test_features.parquet`
+   - Must include predictions for **all 186,158** `(user_id, snapshot_id)` pairs in `test_features.parquet`
+   - Your CSV should have exactly 186,158 rows (plus header)
 
 
 
