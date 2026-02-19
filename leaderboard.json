@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-02-19T19:22:24.843953",
+  "last_updated": "2026-02-19T20:33:46.793471",
   "submissions": [
     {
       "team": "Team_Sam",
@@ -8,6 +8,16 @@
       "overall_f1": 0.35770695211468073,
       "rare_f1": 0.0,
       "timestamp": "2026-02-13T11:54:52.706955",
+      "model_type": "human",
+      "rank": 1
+    },
+    {
+      "team": "Team_Sam_test_tied",
+      "submission_file": "/home/runner/work/shift-gnn-challenge/shift-gnn-challenge/submissions/Team_Sam_test_tied_13-02-2026_13-48-17.csv",
+      "weighted_f1": 0.17448304532423445,
+      "overall_f1": 0.35770695211468073,
+      "rare_f1": 0.0,
+      "timestamp": "2026-02-19T20:33:46.793455",
       "model_type": "human",
       "rank": 1
     }
