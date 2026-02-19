@@ -31,11 +31,11 @@ Let $G_t = (V, E_t)$ be the temporal interaction graph at time $t$. Each node $v
 
 ### What's Challenging ? 
 
-1. **Temporal Shift**: Training data comes from 2009-2013, validation from 2013-2014, and test from 2014-2016. The distribution of user behaviors and network patterns changes over time, making generalization challenging.
+1. **Temporal Shift**: Training data spans earlier snapshots (up to 2015), and test data spans later snapshots (2015–2016). The distribution of user behaviors and network patterns can change over time, making generalization challenging.
 
 2. **Rare Transitions**: The evaluation metric focuses on rare transitions (e.g., "Novice → Expert", "Contributor → Inactive"), which are the most valuable to predict but occur infrequently.
 
-3. **Class Imbalance**: Role distributions are highly imbalanced, with the vast majority of users being Inactive (~78% of current roles, ~88% of next roles), followed by Contributors (~9%) and Novices (~8.5%).
+3. **Class Imbalance**: Role distributions are highly imbalanced. In the training set: **current roles** are Inactive (~73%), Contributor (~13%), Novice (~8%), Expert (~5%), Moderator (~1%); **next roles** (target) are even more skewed toward Inactive (~81%), followed by Contributor (~8%), Novice (~7%), Expert (~3%), and Moderator (~1%). The test set is similarly imbalanced (e.g. ~85% Inactive for current roles).
 
 4. **Graph Structure**: Features must be extracted from the temporal graph structure alone - no external data or text features are allowed.
 
@@ -44,19 +44,19 @@ Let $G_t = (V, E_t)$ be the temporal interaction graph at time $t$. Each node $v
 
 ## 📊 Dataset
 
-The dataset is based on the **Super User Stack Exchange temporal network** from SNAP:
-- **Nodes**: Users (194,085 unique users)
-- **Edges**: Temporal interactions (1,443,339 edges)
-- **Time Span**: ~7 years (2009-2016)
+The dataset is based on the **Super User Stack Exchange temporal network** from SNAP. The **processed data** provided in this challenge (after downsampling for computational affordability) contains:
+- **Nodes**: ~49,000 unique users (in train + test)
+- **Edges**: ~404,000 temporal edges (in `adjacency_all.parquet`)
+- **Time Span**: Training snapshots span 2008–2015; test snapshots 2015–2016
 - **Edge Types**: Answers to questions, comments to questions, comments to answers
 
 **Files available in `data/processed/` :**
-- `train.parquet` - Training set with labels (user_id, snapshot_id, current_role, next_role, timestamps)
+- `train.parquet` - Training set with labels (user_id, snapshot_id, current_role, next_role, snapshot_start, snapshot_end, etc.)
   - **Size**: 490,957 samples
-  - **Time period**: 2009-2013
-- `test_features.parquet` - Test set without labels (user_id, snapshot_id, current_role, timestamps)
+  - **Time period**: training snapshots (multiple years up to 2015)
+- `test_features.parquet` - Test set without labels (user_id, snapshot_id, current_role, snapshot_start, snapshot_end)
   - **Size**: 186,158 samples
-  - **Time period**: 2014-2016
+  - **Time period**: test snapshots (2015–2016)
   - **⚠️ This is what you need to predict!**
 - `adjacency_all.parquet` - **Adjacency matrices A_t** (all edges with snapshot_id, COO sparse format) 
 - `node_features_all.parquet` - **Node features X** (all node features with snapshot_id) 
@@ -171,7 +171,7 @@ To ensure fair competition and focus on scalable GNN methods:
 4. **Generate predictions** for the test set:
 
    **Test data file**: `data/processed/test_features.parquet`
-   - Contains: `user_id`, `snapshot_id`, `current_role`, `timestamps`
+   - Contains: `user_id`, `snapshot_id`, `current_role`, `snapshot_start`, `snapshot_end`
    - **Size**: 186,158 samples (you must predict `next_role` for all of them)
    - **No labels** - this is what you need to predict!
    - Your model should predict `next_role` for each `(user_id, snapshot_id)` pair in this file
