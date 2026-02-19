@@ -1,4 +1,4 @@
-# SHIFT-GNN
+# SHIFT-GNN Challenge
 
 **Structural & Historical Inference of Functional role Transitions with GNNs**
 
