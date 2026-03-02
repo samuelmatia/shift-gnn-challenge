@@ -1,5 +1,5 @@
 """
-Extract scores from evaluation output and format them for leaderboard.
+Extract scores from evaluation output and format them for leaderboard
 """
 import json
 import sys
