@@ -1,4 +1,15 @@
 {
-  "last_updated": "2026-03-02T11:56:47.200525",
-  "submissions": []
+  "last_updated": "2026-03-07T20:37:15.969234",
+  "submissions": [
+    {
+      "team": "Gurur Gamgam",
+      "submission_file": "/home/runner/work/shift-gnn-challenge/shift-gnn-challenge/submissions/Gurur Gamgam_07-03-2026_21-36-32.csv",
+      "weighted_f1": 0.17802280283283164,
+      "overall_f1": 0.3604319412065697,
+      "rare_f1": 0.0,
+      "timestamp": "2026-03-07T20:37:15.969203",
+      "model_type": "human",
+      "rank": 1
+    }
+  ]
 }
