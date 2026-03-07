@@ -1,6 +1,16 @@
 {
-  "last_updated": "2026-03-07T23:44:55.370158",
+  "last_updated": "2026-03-07T23:55:30.601350",
   "submissions": [
+    {
+      "team": "nteam",
+      "submission_file": "/home/runner/work/shift-gnn-challenge/shift-gnn-challenge/submissions/nteam_08-03-2026_00-54-45.csv",
+      "weighted_f1": 0.189796201059522,
+      "overall_f1": 0.3647750649060729,
+      "rare_f1": 0.0,
+      "timestamp": "2026-03-07T23:55:30.601332",
+      "model_type": "human",
+      "rank": 1
+    },
     {
       "team": "Gurur Gamgam",
       "submission_file": "/home/runner/work/shift-gnn-challenge/shift-gnn-challenge/submissions/Gurur Gamgam_07-03-2026_21-36-32.csv",
@@ -9,7 +19,7 @@
       "rare_f1": 0.0,
       "timestamp": "2026-03-07T20:37:15.969203",
       "model_type": "human",
-      "rank": 1
+      "rank": 2
     }
   ]
 }
