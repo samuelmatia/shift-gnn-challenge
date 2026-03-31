@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-03-31T05:24:57.633370",
+  "last_updated": "2026-03-31T05:50:49.068650",
   "submissions": [
     {
       "team": "Peguy",
@@ -70,6 +70,16 @@
       "timestamp": "2026-03-12T12:36:59.232672",
       "model_type": "human",
       "rank": 7
+    },
+    {
+      "team": "Sargam Goyal",
+      "submission_file": "/home/runner/work/shift-gnn-challenge/shift-gnn-challenge/submissions/Sargam Goyal_31-03-2026_06-49-46.csv",
+      "weighted_f1": 0.06666666666659621,
+      "overall_f1": 0.18913374677880668,
+      "rare_f1": 0.0,
+      "timestamp": "2026-03-31T05:50:49.068630",
+      "model_type": "human",
+      "rank": 8
     }
   ]
 }
