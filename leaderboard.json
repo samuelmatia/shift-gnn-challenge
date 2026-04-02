@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-04-02T19:59:54.411973",
+  "last_updated": "2026-04-02T20:06:31.373610",
   "submissions": [
     {
       "team": "Peguy",
@@ -62,6 +62,16 @@
       "rank": 6
     },
     {
+      "team": "Muhammad Isah",
+      "submission_file": "/home/runner/work/shift-gnn-challenge/shift-gnn-challenge/submissions/Muhammad Isah_02-04-2026_21-05-24.csv",
+      "weighted_f1": 0.1697497594291837,
+      "overall_f1": 0.2880294807963629,
+      "rare_f1": 0.0,
+      "timestamp": "2026-04-02T20:06:31.373593",
+      "model_type": "human",
+      "rank": 7
+    },
+    {
       "team": "Faran Taimoor Butt",
       "submission_file": "/home/runner/work/shift-gnn-challenge/shift-gnn-challenge/submissions/Faran Taimoor Butt_12-03-2026_11-45-13.csv",
       "weighted_f1": 0.08158023778341711,
@@ -69,7 +79,7 @@
       "rare_f1": 0.0,
       "timestamp": "2026-03-12T10:46:06.424153",
       "model_type": "human",
-      "rank": 7
+      "rank": 8
     },
     {
       "team": "Bijay Adhikari",
@@ -79,7 +89,7 @@
       "rare_f1": 0.0,
       "timestamp": "2026-03-12T12:36:59.232672",
       "model_type": "human",
-      "rank": 8
+      "rank": 9
     },
     {
       "team": "Sargam Goyal",
@@ -89,7 +99,7 @@
       "rare_f1": 0.0,
       "timestamp": "2026-03-31T05:50:49.068630",
       "model_type": "human",
-      "rank": 9
+      "rank": 10
     }
   ]
 }
