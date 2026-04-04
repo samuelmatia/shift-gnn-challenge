@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-04-04T10:31:44.299726",
+  "last_updated": "2026-04-04T10:57:42.823917",
   "submissions": [
     {
       "team": "Peguy",
@@ -12,6 +12,16 @@
       "rank": 1
     },
     {
+      "team": "AIkram",
+      "submission_file": "/home/runner/work/shift-gnn-challenge/shift-gnn-challenge/submissions/AIkram_04-04-2026_11-56-27.csv",
+      "weighted_f1": 0.20166723867398914,
+      "overall_f1": 0.3656326298963189,
+      "rare_f1": 0.0,
+      "timestamp": "2026-04-04T10:57:42.823893",
+      "model_type": "human",
+      "rank": 2
+    },
+    {
       "team": "Murad",
       "submission_file": "/home/runner/work/shift-gnn-challenge/shift-gnn-challenge/submissions/Murad_23-03-2026_04-41-34.csv",
       "weighted_f1": 0.19914353801719212,
@@ -19,7 +29,7 @@
       "rare_f1": 0.0,
       "timestamp": "2026-03-23T03:42:38.051028",
       "model_type": "human",
-      "rank": 2
+      "rank": 3
     },
     {
       "team": "Emmanuel Owusu",
@@ -29,7 +39,7 @@
       "rare_f1": 0.014814814814814815,
       "timestamp": "2026-03-16T10:50:12.767031",
       "model_type": "human",
-      "rank": 3
+      "rank": 4
     },
     {
       "team": "nteam",
@@ -39,7 +49,7 @@
       "rare_f1": 0.0,
       "timestamp": "2026-03-07T23:55:30.601332",
       "model_type": "human",
-      "rank": 4
+      "rank": 5
     },
     {
       "team": "Gurur Gamgam",
@@ -49,7 +59,7 @@
       "rare_f1": 0.0,
       "timestamp": "2026-03-07T20:37:15.969203",
       "model_type": "human",
-      "rank": 5
+      "rank": 6
     },
     {
       "team": "Mubaraq",
@@ -59,7 +69,7 @@
       "rare_f1": 0.0,
       "timestamp": "2026-04-01T17:59:39.048233",
       "model_type": "llm",
-      "rank": 6
+      "rank": 7
     },
     {
       "team": "Elhouiti Ikram",
@@ -69,7 +79,7 @@
       "rare_f1": 0.0,
       "timestamp": "2026-04-03T00:15:40.886606",
       "model_type": "human",
-      "rank": 7
+      "rank": 8
     },
     {
       "team": "Muhammad Isah",
@@ -79,7 +89,7 @@
       "rare_f1": 0.0,
       "timestamp": "2026-04-02T20:06:31.373593",
       "model_type": "human",
-      "rank": 8
+      "rank": 9
     },
     {
       "team": "Faran Taimoor Butt",
@@ -89,7 +99,7 @@
       "rare_f1": 0.0,
       "timestamp": "2026-03-12T10:46:06.424153",
       "model_type": "human",
-      "rank": 9
+      "rank": 10
     },
     {
       "team": "Bijay Adhikari",
@@ -99,7 +109,7 @@
       "rare_f1": 0.0,
       "timestamp": "2026-03-12T12:36:59.232672",
       "model_type": "human",
-      "rank": 10
+      "rank": 11
     },
     {
       "team": "Sargam Goyal",
@@ -109,7 +119,7 @@
       "rare_f1": 0.0,
       "timestamp": "2026-03-31T05:50:49.068630",
       "model_type": "human",
-      "rank": 11
+      "rank": 12
     }
   ]
 }
